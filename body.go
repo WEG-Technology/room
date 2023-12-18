@@ -3,33 +3,22 @@ package room
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"github.com/google/go-querystring/query"
 	"net/url"
 )
 
-// TODO make contentType as a custom type
-func NewBodyFactory(contentType string) IBody {
-	switch contentType {
-	case headerValueApplicationJson:
-		return JsonBody{}
-	case headerValueFormEncoded:
-		return FormURLEncodedBody{}
-	default:
-		panic(errors.New("unsupported type"))
-	}
+type IBodyParser interface {
+	Parse() *bytes.Buffer
 }
 
-type IBody interface {
-	Body(v any) *bytes.Buffer
+type JsonBody struct {
+	v any
 }
 
-type JsonBody struct{}
-
-func (f JsonBody) Body(v any) *bytes.Buffer {
+func (f JsonBody) Parse() *bytes.Buffer {
 	var buf bytes.Buffer
 
-	err := json.NewEncoder(&buf).Encode(v)
+	err := json.NewEncoder(&buf).Encode(f.v)
 
 	if err != nil {
 		panic(err)
@@ -38,12 +27,22 @@ func (f JsonBody) Body(v any) *bytes.Buffer {
 	return &buf
 }
 
-type FormURLEncodedBody struct{}
+func NewJsonBodyParser(v any) IBodyParser {
+	return JsonBody{v}
+}
 
-func (f FormURLEncodedBody) Body(v any) *bytes.Buffer {
+func NewFormURLEncodedBodyParser(v any) IBodyParser {
+	return FormURLEncodedBody{v}
+}
+
+type FormURLEncodedBody struct {
+	v any
+}
+
+func (f FormURLEncodedBody) Parse() *bytes.Buffer {
 	formValues := url.Values{}
 
-	formValues, err := query.Values(v)
+	formValues, err := query.Values(f.v)
 
 	if err != nil {
 		panic(err)

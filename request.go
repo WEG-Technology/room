@@ -2,7 +2,6 @@ package room
 
 import (
 	"context"
-	"io"
 	"net/http"
 )
 
@@ -50,7 +49,7 @@ type BaseRequest struct {
 	connectionConfig IConnectionConfig
 	observer         IRequestObserver
 	contextBuilder   IContextBuilder
-	body             any
+	body             IBodyParser
 	endPoint         string
 	dto              any
 }
@@ -131,17 +130,9 @@ func (r *BaseRequest) InjectHeader() {
 }
 
 func (r *BaseRequest) NewRequestWithContext() (err error) {
-	r.R, err = http.NewRequestWithContext(r.ctx, r.method.String(), r.url(), r.Body())
+	r.R, err = http.NewRequestWithContext(r.ctx, r.method.String(), r.url(), r.body.Parse())
 
 	return err
-}
-
-func (r *BaseRequest) Body() io.Reader {
-	if r.body == nil {
-		return nil
-	}
-
-	return NewBodyFactory(r.header.Get(headerKeyContentType)).Body(r.body)
 }
 
 func (r *BaseRequest) Request() *http.Request {
@@ -202,7 +193,7 @@ func WithMethod(method HTTPMethod) OptionRequest {
 	}
 }
 
-func WithBody(body any) OptionRequest {
+func WithBody(body IBodyParser) OptionRequest {
 	return func(request *BaseRequest) {
 		request.body = body
 	}
