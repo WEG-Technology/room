@@ -14,7 +14,7 @@ func NewAddTODORequest(params AddTODORequest) room.IRequest {
 	r, e := room.NewPostRequest(
 		room.WithEndPoint("todos/add"),
 		room.WithDto(&AddTODOResponse{}),
-		room.WithBody(params),
+		room.WithBody(room.NewJsonBodyParser(params)),
 	)
 
 	if e != nil {
