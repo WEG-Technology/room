@@ -52,5 +52,5 @@ There is an example of this explanation in `./examples/room_example`
 ### 🧬 Clients Developed with Room
 ```TODO```
 Please, feel free to add your client to this list.
-- ...
+- [Parasut](https://github.com/yahya077/parasut)
 - ...
