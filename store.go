@@ -14,6 +14,7 @@ type IMap interface {
 	Merge(data map[string]any) IMap
 	Each(callback func(key string, value any)) IMap
 	MergeIMap(m IMap) IMap
+	SetMultiple(data ...map[string]any) IMap
 }
 
 func NewMapStore(defData ...map[string]any) IMap {

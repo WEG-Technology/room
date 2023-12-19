@@ -209,11 +209,3 @@ func (c *Connection) InitUrl() {
 
 	c.baseUrl = c.protocol.String() + c.domain + "/"
 }
-
-type connectionObserver struct{}
-
-func (c connectionObserver) OnDo(request IRequest) {}
-
-func (c connectionObserver) OnRequestCreated(request IRequest) {}
-
-func (c connectionObserver) OnResponseCompleted(request IRequest, response IResponse, err error) {}
