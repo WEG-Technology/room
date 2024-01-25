@@ -40,3 +40,26 @@ func (b ContextWithTransaction) Build() (context.Context, context.CancelFunc) {
 	return NewContext(context.Background(), txn), nil
 }
 */
+
+//Example: NewRelicContextBuilder
+/*
+
+type NewRelicContextBuilder struct {
+	txn *newrelic.Transaction
+}
+
+func (b NewRelicContextBuilder) Build() (context.Context, context.CancelFunc) {
+	ctx, cancel := context.WithTimeout(context.Background(), b.Timeout())
+
+	return newrelic.NewContext(ctx, b.txn), cancel
+}
+
+func (b NewRelicContextBuilder) Timeout() time.Duration {
+	return time.Second * 15
+}
+
+func NewContextBuilder(txn *newrelic.Transaction) room.IContextBuilder {
+	return NewRelicContextBuilder{txn}
+}
+
+*/
