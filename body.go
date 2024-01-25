@@ -50,3 +50,7 @@ func (f FormURLEncodedBody) Parse() *bytes.Buffer {
 
 	return bytes.NewBufferString(formValues.Encode())
 }
+
+type dumpBody struct{}
+
+func (f dumpBody) Parse() *bytes.Buffer { return new(bytes.Buffer) }

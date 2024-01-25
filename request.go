@@ -49,7 +49,7 @@ type BaseRequest struct {
 	connectionConfig IConnectionConfig
 	observer         IRequestObserver
 	contextBuilder   IContextBuilder
-	body             IBodyParser
+	bodyParser       IBodyParser
 	endPoint         string
 	dto              any
 }
@@ -77,6 +77,10 @@ func newRequest(opts ...OptionRequest) (IRequest, error) {
 
 	if r.observer == nil {
 		r.observer = requestObserver{}
+	}
+
+	if r.bodyParser == nil {
+		r.bodyParser = dumpBody{}
 	}
 
 	//TODO handle endpoint when its nil
@@ -130,7 +134,7 @@ func (r *BaseRequest) InjectHeader() {
 }
 
 func (r *BaseRequest) NewRequestWithContext() (err error) {
-	r.R, err = http.NewRequestWithContext(r.ctx, r.method.String(), r.url(), r.body.Parse())
+	r.R, err = http.NewRequestWithContext(r.ctx, r.method.String(), r.url(), r.bodyParser.Parse())
 
 	return err
 }
@@ -193,9 +197,9 @@ func WithMethod(method HTTPMethod) OptionRequest {
 	}
 }
 
-func WithBody(body IBodyParser) OptionRequest {
+func WithBody(bodyParser IBodyParser) OptionRequest {
 	return func(request *BaseRequest) {
-		request.body = body
+		request.bodyParser = bodyParser
 	}
 }
 
