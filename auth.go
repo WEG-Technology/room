@@ -10,7 +10,7 @@ type IAuthStrategy interface {
 }
 
 type ITokenAuthResponse interface {
-	GetBearerToken(authResponse IResponse) string
+	GetBearerToken() string
 }
 
 type TokenAuth struct {
@@ -28,7 +28,7 @@ func (a TokenAuth) GetAuthRequest() IRequest {
 func (a TokenAuth) Authenticate(request IRequest, authResponse IResponse) error {
 	response := authResponse.Dto().(ITokenAuthResponse)
 
-	request.Header().Add("Authorization", fmt.Sprintf("Bearer %s", response.GetBearerToken(authResponse)))
+	request.Header().Add("Authorization", fmt.Sprintf("Bearer %s", response.GetBearerToken()))
 
 	return nil
 }
