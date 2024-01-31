@@ -24,9 +24,9 @@ type IConnection interface {
 	Send(request IRequest) IResponse
 	GetDomain() string
 	InitUrl()
-	setProtocol(protocol HTTPProtocol)
-	setBaseUrl(baseUrl string)
-	setDomain(domain string)
+	SetProtocol(protocol HTTPProtocol)
+	SetBaseUrl(baseUrl string)
+	SetDomain(domain string)
 }
 
 type IConnectionObserver interface {
@@ -183,15 +183,15 @@ func (c *Connection) GetDomain() string {
 	return c.domain
 }
 
-func (c *Connection) setProtocol(protocol HTTPProtocol) {
+func (c *Connection) SetProtocol(protocol HTTPProtocol) {
 	c.protocol = protocol
 }
 
-func (c *Connection) setBaseUrl(baseUrl string) {
+func (c *Connection) SetBaseUrl(baseUrl string) {
 	c.baseUrl = baseUrl
 }
 
-func (c *Connection) setDomain(domain string) {
+func (c *Connection) SetDomain(domain string) {
 	c.domain = domain
 }
 
