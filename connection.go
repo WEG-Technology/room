@@ -18,6 +18,7 @@ type IConnectionConfig interface {
 	Protocol() HTTPProtocol
 	BaseUrl() string
 	DefaultHeader() IHeader
+	PreRequest() IRequest
 }
 
 type IConnection interface {
@@ -107,6 +108,7 @@ type ConnectionConfig struct {
 	domain          string
 	baseUrl         string
 	defaultHeader   IHeader
+	preRequest      IRequest
 }
 
 func DefaultConnectionConfig() IConnectionConfig {
@@ -135,6 +137,10 @@ func (c ConnectionConfig) DefaultHeader() IHeader {
 	return c.defaultHeader
 }
 
+func (c ConnectionConfig) PreRequest() IRequest {
+	return c.preRequest
+}
+
 type Connection struct {
 	client          *http.Client
 	domain          string
@@ -143,6 +149,7 @@ type Connection struct {
 	defaultHeader   IHeader
 	timeoutDuration time.Duration
 	observer        IConnectionObserver
+	preRequest      IRequest
 }
 
 func (c *Connection) do(request IRequest) IResponse {
@@ -154,6 +161,7 @@ func (c *Connection) do(request IRequest) IResponse {
 		baseUrl:         c.baseUrl,
 		timeoutDuration: c.timeoutDuration,
 		defaultHeader:   c.defaultHeader,
+		preRequest:      c.preRequest,
 	})
 
 	request.Create()

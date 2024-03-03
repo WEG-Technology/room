@@ -32,6 +32,13 @@ func (f ResponseDirector) Response(response *http.Response, request IRequest, er
 		_ = NewDTOFactory(request.Header().Get(headerKeyAccept)).marshallDTO(responseDTO.Data(), request.Dto())
 
 		responseDTO.setDto(request.Dto())
+	} else {
+		//TODO make it conditional to avoid unnecessary unmarshalling
+		var responseMap map[string]any
+
+		_ = NewDTOFactory(headerKeyAccept).marshallDTO(responseDTO.Data(), &responseMap)
+
+		responseDTO.setDto(responseMap)
 	}
 
 	return responseDTO

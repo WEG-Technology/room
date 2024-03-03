@@ -23,11 +23,12 @@ func main() {
 	engine := elevator.NewElevatorEngine(el).WarmUp()
 
 	response := engine.
+		PutAuthStrategy("todoRoom", NewCustomAuth()).
 		PutBodyParser("todoRoom", "addTodo", room.NewJsonBodyParser(payload)).
 		Execute("todoRoom", "addTodo")
 
 	fmt.Println("RequestUri", response.RequestUri())
-	fmt.Println("RequestHeader", response.RequestHeader())
+	fmt.Println("RequestHeader", response.RequestHeader().Properties())
 	fmt.Println("StatusCode", response.StatusCode())
 	fmt.Println("Header", response.Header())
 	fmt.Println("Status", response.Status())

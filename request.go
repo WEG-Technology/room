@@ -19,10 +19,12 @@ type IRequest interface {
 	Request() *http.Request
 	Dto() any
 	Header() IHeader
+	PreRequest() IRequest
 	SetConnectionConfig(connectionConfig IConnectionConfig) IRequest
 	SetHeaders(headers IMap) IRequest
 	PutHeaderProperties(header IHeader) IRequest
 	PutBodyParser(bodyParser IBodyParser) IRequest
+	PutPreRequest(preRequest IRequest) IRequest
 	PutDTO(dto any) IRequest
 	InjectHeader()
 	NewRequestWithContext() (err error)
@@ -52,6 +54,7 @@ type BaseRequest struct {
 	observer         IRequestObserver
 	contextBuilder   IContextBuilder
 	bodyParser       IBodyParser
+	preRequest       IRequest
 	endPoint         string
 	dto              any
 }
@@ -166,6 +169,14 @@ func (r *BaseRequest) Header() IHeader {
 	return r.header
 }
 
+func (r *BaseRequest) PreRequest() IRequest {
+	if preRequest := r.connectionConfig.PreRequest(); preRequest != nil {
+		return preRequest
+	}
+
+	return r.preRequest
+}
+
 func (r *BaseRequest) SetConnectionConfig(connectionConfig IConnectionConfig) IRequest {
 	r.connectionConfig = connectionConfig
 	return r
@@ -186,6 +197,11 @@ func (r *BaseRequest) PutHeaderProperties(header IHeader) IRequest {
 
 func (r *BaseRequest) PutBodyParser(bodyParser IBodyParser) IRequest {
 	r.bodyParser = bodyParser
+	return r
+}
+
+func (r *BaseRequest) PutPreRequest(preRequest IRequest) IRequest {
+	r.preRequest = preRequest
 	return r
 }
 

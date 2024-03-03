@@ -6,6 +6,17 @@ flat:
         timeout: 15
         headers:
           Content-Type: "application/json"
+        auth:
+          type: "bearer"
+          request:
+            method: "POST"
+            path: "auth/login"
+            body:
+              type: "json"
+              content:
+                username: ${USERNAME}
+                password: ${PASSWORD}
+
       requests:
         addTodo:
           concurrentKey: "add"

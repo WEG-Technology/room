@@ -2,48 +2,41 @@ package room
 
 type IRoom interface {
 	Send(request IRequest) IResponse
+	PutAuthStrategy(auth IAuthStrategy)
 	GetSegment() ISegment
 }
 
-type IRoomObserver interface {
-	OnError(request IRequest, response IResponse)
-	OnAuthError(request IRequest, response IResponse)
-	OnComplete(request IRequest, response IResponse)
-	OnAuthComplete(request IRequest, response IResponse)
-}
-
 type Room struct {
-	observer     IRoomObserver
 	connection   IConnection
 	authStrategy IAuthStrategy
 	segment      ISegment
+}
+
+func (r *Room) PutAuthStrategy(authStrategy IAuthStrategy) {
+	r.authStrategy = authStrategy
 }
 
 func (r *Room) Send(request IRequest) IResponse {
 	r.segment = StartSegmentNow()
 	defer r.segment.End()
 
-	if r.authStrategy != nil {
-		response := r.connection.Send(r.authStrategy.GetAuthRequest())
+	if request.PreRequest() != nil {
+		response := r.connection.Send(request.PreRequest())
 
 		if !response.Ok() {
-			r.observer.OnAuthError(r.authStrategy.GetAuthRequest(), response)
 			return response
 		}
 
-		err := r.authStrategy.Authenticate(request, response)
+		if r.authStrategy != nil {
+			err := r.authStrategy.Authenticate(request, response)
 
-		if err != nil {
-			r.observer.OnAuthError(r.authStrategy.GetAuthRequest(), response)
-			return response
+			if err != nil {
+				return response
+			}
 		}
-
-		r.observer.OnAuthComplete(r.authStrategy.GetAuthRequest(), response)
 	}
 
 	response := r.connection.Send(request)
-
-	r.observer.OnComplete(request, response)
 
 	return response
 }
@@ -53,12 +46,6 @@ func (r *Room) GetSegment() ISegment {
 }
 
 type OptionRoom func(request *Room)
-
-func WithObserver(observer IRoomObserver) OptionRoom {
-	return func(room *Room) {
-		room.observer = observer
-	}
-}
 
 func WithAuth(auth IAuthStrategy) OptionRoom {
 	return func(room *Room) {
@@ -72,10 +59,6 @@ func NewRoom(connection IConnection, opts ...OptionRoom) *Room {
 
 	for _, opt := range opts {
 		opt(r)
-	}
-
-	if r.observer == nil {
-		r.observer = dummyObserver{}
 	}
 
 	return r

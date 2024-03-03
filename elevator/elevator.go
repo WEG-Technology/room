@@ -32,6 +32,7 @@ type IElevatorEngine interface {
 	ExecuteConcurrent(concurrentKey string) map[string]room.IResponse
 	WarmUp() IElevatorEngine
 	PutBodyParser(roomKey, requestKey string, bodyParser room.IBodyParser) IElevatorEngine
+	PutAuthStrategy(roomKey string, authStrategy room.IAuthStrategy) IElevatorEngine
 	PutDTO(roomKey, requestKey string, dto any) IElevatorEngine
 	GetElapsedTime() float64
 }
@@ -61,7 +62,6 @@ func NewElevatorEngine(elevator Elevator) IElevatorEngine {
 func (e *ElevatorEngine) Execute(roomKey, requestKey string) room.IResponse {
 	if roomContainerEntry, ok := e.RoomContainers[roomKey]; ok {
 		if requestEntry, ok := roomContainerEntry.Requests[requestKey]; ok {
-			fmt.Println("roomKey: ", roomKey, "request: ", requestKey)
 			return roomContainerEntry.Room.Send(requestEntry)
 		}
 	}
@@ -127,32 +127,41 @@ func (e *ElevatorEngine) WarmUp() IElevatorEngine {
 		}
 
 		for requestKey, request := range r.Requests {
-			var parser room.IBodyParser
-			//TODO expand here
-			switch request.Body.Type {
-			case "json":
-				parser = room.NewJsonBodyParser(request.Body.Content)
-			default:
-				parser = nil
+			roomContainers[roomKey].Requests[requestKey] = e.CreateRequest(request)
+
+			if r.Connection.Auth.Type == "bearer" {
+				roomContainers[roomKey].Requests[requestKey].PutPreRequest(e.CreateRequest(r.Connection.Auth.Request))
 			}
-
-			roomRequest, err := room.NewRequest(
-				room.WithMethod(room.HTTPMethod(request.Method)),
-				room.WithEndPoint(request.Path),
-				room.WithBody(parser),
-			)
-
-			if err != nil {
-				panic(err)
-			}
-
-			roomContainers[roomKey].Requests[requestKey] = roomRequest
 		}
 	}
 
 	e.RoomContainers = roomContainers
 
 	return e
+}
+
+func (e *ElevatorEngine) CreateRequest(request Request) room.IRequest {
+	var parser room.IBodyParser
+	//TODO expand here
+	switch request.Body.Type {
+	case "json":
+		parser = room.NewJsonBodyParser(request.Body.Content)
+	default:
+		parser = nil
+	}
+
+	r, err := room.NewRequest(
+		//TODO use unmarshall to get the method instead of hardcoding
+		room.WithMethod(room.HTTPMethod(request.Method)),
+		room.WithEndPoint(request.Path),
+		room.WithBody(parser),
+	)
+
+	if err != nil {
+		panic(err)
+	}
+
+	return r
 }
 
 func (e *ElevatorEngine) PutBodyParser(roomKey, requestKey string, bodyParser room.IBodyParser) IElevatorEngine {
@@ -162,6 +171,15 @@ func (e *ElevatorEngine) PutBodyParser(roomKey, requestKey string, bodyParser ro
 			return e
 		}
 		panic(fmt.Sprintf("engine for %s on %s not configured", roomKey, requestKey))
+	}
+
+	panic(fmt.Sprintf("engine for %s not configured", roomKey))
+}
+
+func (e *ElevatorEngine) PutAuthStrategy(roomKey string, authStrategy room.IAuthStrategy) IElevatorEngine {
+	if roomContainerEntry, ok := e.RoomContainers[roomKey]; ok {
+		roomContainerEntry.Room.PutAuthStrategy(authStrategy)
+		return e
 	}
 
 	panic(fmt.Sprintf("engine for %s not configured", roomKey))
@@ -245,6 +263,12 @@ type Connection struct {
 	BaseURL string         `yaml:"baseUrl"`
 	Timeout int            `yaml:"timeout"`
 	Headers map[string]any `yaml:"headers"`
+	Auth    ConnectionAuth `yaml:"auth"`
+}
+
+type ConnectionAuth struct {
+	Type    string  `yaml:"type"`
+	Request Request `yaml:"request"`
 }
 
 type Request struct {
