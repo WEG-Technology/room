@@ -31,7 +31,7 @@ func main() {
 		PutBodyParser("todo2Room", "addTodo", room.NewJsonBodyParser(payload)).
 		ExecuteConcurrent("add")
 
-	fmt.Println(engine.Segment.GetElapsedTime())
+	fmt.Println(engine.GetElapsedTime())
 
 	for i, res := range responses {
 		fmt.Println(fmt.Sprintf("response for %s", i))
