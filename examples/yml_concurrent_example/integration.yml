@@ -15,7 +15,7 @@ flat:
     todo1Room:
       connection:
         baseUrl: ${BASE_URL}
-        timeout: 15
+        timeout: 1 # this request will timeout
         headers:
           Content-Type: "application/json"
           X-Type: "TODO - 2"
@@ -23,7 +23,7 @@ flat:
         addTodo:
           concurrentKey: "add"
           method: "POST"
-          path: "todos/add"
+          path: "todos/add?delay=3000"
     todo2Room:
       connection:
         baseUrl: ${BASE_URL}

@@ -7,6 +7,7 @@ import (
 	"gopkg.in/yaml.v3"
 	"os"
 	"sync"
+	"time"
 )
 
 func readYml(path string) ([]byte, error) {
@@ -115,6 +116,7 @@ func (e *ElevatorEngine) WarmUp() IElevatorEngine {
 		c, err := room.NewConnection(
 			room.WithBaseUrl(r.Connection.BaseURL),
 			room.WithDefaultHeader(room.NewHeader(room.NewMapStore(r.Connection.Headers))),
+			room.WithTimeout(time.Duration(r.Connection.Timeout)*time.Second),
 		)
 
 		if err != nil {

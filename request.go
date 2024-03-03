@@ -214,6 +214,9 @@ func (r *BaseRequest) PreRequest() IRequest {
 
 func (r *BaseRequest) SetConnectionConfig(connectionConfig IConnectionConfig) IRequest {
 	r.connectionConfig = connectionConfig
+
+	//TODO make an observer for changes of few fields
+	r.contextBuilder = NewContextBuilder(r.connectionConfig.TimeoutDuration())
 	return r
 }
 
