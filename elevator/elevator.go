@@ -33,6 +33,7 @@ type IElevatorEngine interface {
 	ExecuteConcurrent(concurrentKey string) map[string]room.IResponse
 	WarmUp() IElevatorEngine
 	PutBodyParser(roomKey, requestKey string, bodyParser room.IBodyParser) IElevatorEngine
+	PutQuery(roomKey, requestKey string, authStrategy room.IQuery) IElevatorEngine
 	PutAuthStrategy(roomKey string, authStrategy room.IAuthStrategy) IElevatorEngine
 	PutDTO(roomKey, requestKey string, dto any) IElevatorEngine
 	GetElapsedTime() float64
@@ -148,6 +149,8 @@ func (e *ElevatorEngine) CreateRequest(request Request) room.IRequest {
 	switch request.Body.Type {
 	case "json":
 		parser = room.NewJsonBodyParser(request.Body.Content)
+	case "form":
+		parser = room.NewFormURLEncodedBodyParser(request.Body.Content)
 	default:
 		parser = nil
 	}
@@ -170,6 +173,18 @@ func (e *ElevatorEngine) PutBodyParser(roomKey, requestKey string, bodyParser ro
 	if roomContainerEntry, ok := e.RoomContainers[roomKey]; ok {
 		if requestEntry, ok := roomContainerEntry.Requests[requestKey]; ok {
 			requestEntry.PutBodyParser(bodyParser)
+			return e
+		}
+		panic(fmt.Sprintf("engine for %s on %s not configured", roomKey, requestKey))
+	}
+
+	panic(fmt.Sprintf("engine for %s not configured", roomKey))
+}
+
+func (e *ElevatorEngine) PutQuery(roomKey, requestKey string, query room.IQuery) IElevatorEngine {
+	if roomContainerEntry, ok := e.RoomContainers[roomKey]; ok {
+		if requestEntry, ok := roomContainerEntry.Requests[requestKey]; ok {
+			requestEntry.PutQuery(query)
 			return e
 		}
 		panic(fmt.Sprintf("engine for %s on %s not configured", roomKey, requestKey))

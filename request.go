@@ -24,6 +24,7 @@ type IRequest interface {
 	SetHeaders(headers IMap) IRequest
 	PutHeaderProperties(header IHeader) IRequest
 	PutBodyParser(bodyParser IBodyParser) IRequest
+	PutQuery(query IQuery) IRequest
 	PutPreRequest(preRequest IRequest) IRequest
 	PutDTO(dto any) IRequest
 	InjectHeader()
@@ -235,6 +236,11 @@ func (r *BaseRequest) PutHeaderProperties(header IHeader) IRequest {
 
 func (r *BaseRequest) PutBodyParser(bodyParser IBodyParser) IRequest {
 	r.bodyParser = bodyParser
+	return r
+}
+
+func (r *BaseRequest) PutQuery(query IQuery) IRequest {
+	r.query = query
 	return r
 }
 

@@ -40,17 +40,28 @@ type FormURLEncodedBody struct {
 }
 
 func (f FormURLEncodedBody) Parse() *bytes.Buffer {
-	formValues := url.Values{}
+	values := url.Values{}
 
-	formValues, err := query.Values(f.v)
-
-	if err != nil {
-		panic(err)
+	switch f.v.(type) {
+	case map[string]any:
+		values = mapToUrlValues(f.v.(map[string]any))
+	default:
+		values, _ = query.Values(f.v)
 	}
 
-	return bytes.NewBufferString(formValues.Encode())
+	return bytes.NewBufferString(values.Encode())
 }
 
 type dumpBody struct{}
 
 func (f dumpBody) Parse() *bytes.Buffer { return new(bytes.Buffer) }
+
+func mapToUrlValues(v map[string]any) url.Values {
+	values := url.Values{}
+
+	for key, value := range v {
+		values.Add(key, value.(string))
+	}
+
+	return values
+}
