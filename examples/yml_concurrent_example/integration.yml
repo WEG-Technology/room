@@ -1,0 +1,38 @@
+flat:
+  rooms:
+    todoRoom:
+      connection:
+        baseUrl: ${BASE_URL}
+        timeout: 15
+        headers:
+          Content-Type: "application/json"
+          X-Type: "TODO - 1"
+      requests:
+        addTodo:
+          concurrentKey: "add"
+          method: "POST"
+          path: "todos/add"
+    todo1Room:
+      connection:
+        baseUrl: ${BASE_URL}
+        timeout: 15
+        headers:
+          Content-Type: "application/json"
+          X-Type: "TODO - 2"
+      requests:
+        addTodo:
+          concurrentKey: "add"
+          method: "POST"
+          path: "todos/add"
+    todo2Room:
+      connection:
+        baseUrl: ${BASE_URL}
+        timeout: 15
+        headers:
+          Content-Type: "application/jsonx" #this will return bad response
+          X-Type: "TODO - 3"
+      requests:
+        addTodo:
+          concurrentKey: "add"
+          method: "POST"
+          path: "todos/add"
