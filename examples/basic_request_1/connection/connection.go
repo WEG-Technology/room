@@ -16,12 +16,12 @@ func GetTodos() room.IResponse {
 }
 
 func InitApiConnection() {
-	c, e := room.NewConnection(room.WithBaseUrl("https://dummyjson.com"),
+	c, err := room.NewConnection(room.WithBaseUrl("https://dummyjson.com"),
 		room.WithTimeout(10*time.Second),
 	)
 
-	if e != nil {
-		panic(e)
+	if err != nil {
+		panic(err)
 	}
 
 	ApiConnection = c

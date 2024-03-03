@@ -28,7 +28,7 @@ func TestSegmentSchema_End(t *testing.T) {
 	s := new(SegmentSchema)
 	startTime := time.Now().Add(-time.Minute) // Simulate starting in the past
 	s.start(startTime)
-	s.end()
+	s.End()
 
 	if s.endedAt.IsZero() {
 		t.Error("Expected endedAt to be set, but it is zero")
@@ -43,7 +43,7 @@ func TestSegmentSchema_GetElapsedTime(t *testing.T) {
 	s := new(SegmentSchema)
 	startTime := time.Now().Add(-time.Minute) // Simulate starting in the past
 	s.start(startTime)
-	s.end()
+	s.End()
 
 	elapsedTime := s.GetElapsedTime()
 
@@ -53,9 +53,9 @@ func TestSegmentSchema_GetElapsedTime(t *testing.T) {
 }
 
 func TestIntegration(t *testing.T) {
-	s := startNow()
+	s := StartSegmentNow()
 	time.Sleep(time.Second) // Simulate some work being done
-	s.end()
+	s.End()
 
 	elapsedTime := s.GetElapsedTime()
 

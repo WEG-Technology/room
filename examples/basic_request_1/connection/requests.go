@@ -9,14 +9,14 @@ type IndexTodoRequest struct {
 }
 
 func NewIndexTodoRequest() room.IRequest {
-	r, e := room.NewGetRequest(
+	r, err := room.NewGetRequest(
 		room.WithEndPoint("todos"),
 		room.WithMethod(room.GET),
 		room.WithHeader(defaultHeader()),
 	)
 
-	if e != nil {
-		panic(e)
+	if err != nil {
+		panic(err)
 	}
 
 	return r

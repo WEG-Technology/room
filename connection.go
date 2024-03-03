@@ -156,7 +156,9 @@ func (c *Connection) do(request IRequest) IResponse {
 		defaultHeader:   c.defaultHeader,
 	})
 
-	defer request.Create().Cancel()
+	request.Create()
+
+	defer request.Cancel()
 
 	c.observer.OnRequestCreated(request)
 

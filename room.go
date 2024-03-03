@@ -20,8 +20,8 @@ type Room struct {
 }
 
 func (r *Room) Send(request IRequest) IResponse {
-	r.segment = startNow()
-	defer r.segment.end()
+	r.segment = StartSegmentNow()
+	defer r.segment.End()
 
 	if r.authStrategy != nil {
 		response := r.connection.Send(r.authStrategy.GetAuthRequest())
@@ -31,9 +31,9 @@ func (r *Room) Send(request IRequest) IResponse {
 			return response
 		}
 
-		e := r.authStrategy.Authenticate(request, response)
+		err := r.authStrategy.Authenticate(request, response)
 
-		if e != nil {
+		if err != nil {
 			r.observer.OnAuthError(r.authStrategy.GetAuthRequest(), response)
 			return response
 		}

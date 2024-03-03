@@ -22,6 +22,8 @@ type IRequest interface {
 	SetConnectionConfig(connectionConfig IConnectionConfig) IRequest
 	SetHeaders(headers IMap) IRequest
 	PutHeaderProperties(header IHeader) IRequest
+	PutBodyParser(bodyParser IBodyParser) IRequest
+	PutDTO(dto any) IRequest
 	InjectHeader()
 	NewRequestWithContext() (err error)
 	InitContext()
@@ -95,12 +97,25 @@ func newRequest(opts ...OptionRequest) (IRequest, error) {
 	return r, nil
 }
 
+// deprecated will be removed in the future
 func NewGetRequest(opts ...OptionRequest) (IRequest, error) {
+	return newRequest(opts...)
+}
+
+func NewRequest(opts ...OptionRequest) (IRequest, error) {
 	return newRequest(opts...)
 }
 
 func NewPostRequest(opts ...OptionRequest) (IRequest, error) {
 	return newRequest(append(opts, WithMethod(POST))...)
+}
+
+func NewPutRequest(opts ...OptionRequest) (IRequest, error) {
+	return newRequest(append(opts, WithMethod(PUT))...)
+}
+
+func NewDeleteRequest(opts ...OptionRequest) (IRequest, error) {
+	return newRequest(append(opts, WithMethod(DELETE))...)
 }
 
 func (r *BaseRequest) Create() IRequest {
@@ -166,6 +181,16 @@ func (r *BaseRequest) SetHeaders(headers IMap) IRequest {
 
 func (r *BaseRequest) PutHeaderProperties(header IHeader) IRequest {
 	r.header.Merge(header)
+	return r
+}
+
+func (r *BaseRequest) PutBodyParser(bodyParser IBodyParser) IRequest {
+	r.bodyParser = bodyParser
+	return r
+}
+
+func (r *BaseRequest) PutDTO(dto any) IRequest {
+	r.dto = dto
 	return r
 }
 

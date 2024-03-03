@@ -1,0 +1,13 @@
+flat:
+  rooms:
+    todoRoom:
+      connection:
+        baseUrl: ${BASE_URL}
+        timeout: 15
+        headers:
+          Content-Type: "application/json"
+      requests:
+        addTodo:
+          concurrentKey: "add"
+          method: "POST"
+          path: "todos/add"

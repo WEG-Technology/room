@@ -52,13 +52,13 @@ Let's say u have `https://dummyjson.com` api and you want to wrap it with Room p
 1- Create your `connection.go` file
 ```go
 func NewConnection() room.IConnection {
-    c, e := room.NewConnection( // you can use room.NewConnectionWithClient to use your custom http client
+    c, err := room.NewConnection( // you can use room.NewConnectionWithClient to use your custom http client
             room.WithBaseUrl("https://dummyjson.com"), // base url of your api
 	    ),
     )
 
-    if e != nil {
-        panic(e) // you can handle error here
+    if err != nil {
+        panic(err) // you can handle error here
     }
 
     return Connection{c}
@@ -69,14 +69,14 @@ func NewConnection() room.IConnection {
 ```go
 // AddTODORequest is a request to add to do
 func NewAddTODORequest(params AddTODORequest) room.IRequest {
-	r, e := room.NewPostRequest( // you can use room.NewGetRequest, room.NewPutRequest, room.NewDeleteRequest
+	r, err := room.NewPostRequest( // you can use room.NewGetRequest, room.NewPutRequest, room.NewDeleteRequest
 		room.WithEndPoint("todos/add"), // endpoint of your request
 		room.WithDto(&AddTODOResponse{}), // if you want to get response as a struct
 		room.WithBody(room.NewJsonBodyParser(params)), // if you want to send request as a json
 	)
 
-	if e != nil {
-		panic(e) // you can handle error here
+	if err != nil {
+		panic(err) // you can handle error here
 	}
 
 	return r

@@ -11,14 +11,14 @@ type IndexTodoRequest struct {
 }
 
 func NewIndexTodoRequest() (room.IRequest, error) {
-	r, e := room.NewGetRequest(
+	r, err := room.NewGetRequest(
 		room.WithEndPoint("products"),
 		room.WithMethod(room.GET),
 		room.WithHeader(defaultHeader()),
 	)
 
-	if e != nil {
-		return nil, e
+	if err != nil {
+		return nil, err
 	}
 
 	return r, nil
@@ -35,16 +35,16 @@ func defaultHeader() room.IHeader {
 }
 
 func main() {
-	r, e := NewIndexTodoRequest()
+	r, err := NewIndexTodoRequest()
 
-	if e != nil {
-		panic(e)
+	if err != nil {
+		panic(err)
 	}
 
-	c, e := NewConnection()
+	c, err := NewConnection()
 
-	if e != nil {
-		panic(e)
+	if err != nil {
+		panic(err)
 	}
 
 	response := c.Send(r)

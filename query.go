@@ -43,9 +43,9 @@ type IUrlQuery struct {
 }
 
 func (q IUrlQuery) String() string {
-	urlValues, e := query.Values(q.v)
+	urlValues, err := query.Values(q.v)
 
-	if e != nil {
+	if err != nil {
 		return ""
 	}
 

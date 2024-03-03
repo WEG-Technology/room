@@ -1,14 +1,14 @@
 package room
 
-type HTTPMethod int
+type HTTPMethod string
 
 const (
-	GET HTTPMethod = iota
-	POST
-	PUT
-	PATCH
-	DELETE
-	HEAD
+	GET    HTTPMethod = "GET"
+	POST   HTTPMethod = "POST"
+	PUT    HTTPMethod = "PUT"
+	PATCH  HTTPMethod = "PATCH"
+	DELETE HTTPMethod = "DELETE"
+	HEAD   HTTPMethod = "HEAD"
 )
 
 func (s HTTPMethod) String() string {

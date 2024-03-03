@@ -7,13 +7,13 @@ type Connection struct {
 }
 
 func NewConnection() room.IConnection {
-	c, e := room.NewConnection(
+	c, err := room.NewConnection(
 		room.WithBaseUrl("https://dummyjson.com"),
 		room.WithDefaultHeader(defaultHeader()),
 	)
 
-	if e != nil {
-		panic(e)
+	if err != nil {
+		panic(err)
 	}
 
 	return Connection{c}

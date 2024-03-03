@@ -12,7 +12,6 @@ import (
 type ResponseDirector struct{}
 
 func (f ResponseDirector) Response(response *http.Response, request IRequest, err error) IResponse {
-	var e error
 	responseDTO := NewResponse(request)
 
 	if err != nil {
@@ -21,12 +20,12 @@ func (f ResponseDirector) Response(response *http.Response, request IRequest, er
 
 	responseDTO.SetHeader(response.Header).setStatus(response.Status).setStatusCode(response.StatusCode)
 
-	if e = responseDTO.SetRequestBodyData(request); e != nil {
-		return responseDTO.Error(e)
+	if err = responseDTO.SetRequestBodyData(request); err != nil {
+		return responseDTO.Error(err)
 	}
 
-	if e = responseDTO.SetData(response); e != nil {
-		return responseDTO.Error(e)
+	if err = responseDTO.SetData(response); err != nil {
+		return responseDTO.Error(err)
 	}
 
 	if request.Dto() != nil {

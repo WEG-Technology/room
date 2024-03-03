@@ -6,14 +6,14 @@ import (
 )
 
 func NewConnection() room.IConnection {
-	c, e := room.NewConnection(
+	c, err := room.NewConnection(
 		room.WithProtocol(room.Http),
 		room.WithDomain("restapi.adequateshop.com"),
 		room.WithTimeout(15*time.Second),
 	)
 
-	if e != nil {
-		panic(e)
+	if err != nil {
+		panic(err)
 	}
 
 	return c

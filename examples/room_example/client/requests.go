@@ -11,14 +11,14 @@ type AddTODORequest struct {
 }
 
 func NewAddTODORequest(params AddTODORequest) room.IRequest {
-	r, e := room.NewPostRequest(
+	r, err := room.NewPostRequest(
 		room.WithEndPoint("todos/add"),
-		room.WithDto(&AddTODOResponse{}),
+		room.WithDto(new(AddTODOResponse)),
 		room.WithBody(room.NewJsonBodyParser(params)),
 	)
 
-	if e != nil {
-		panic(e)
+	if err != nil {
+		panic(err)
 	}
 
 	return r

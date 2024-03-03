@@ -5,15 +5,15 @@ import (
 )
 
 func NewRequest() room.IRequest {
-	r, e := room.NewGetRequest(
+	r, err := room.NewGetRequest(
 		room.WithEndPoint("api/Traveler"),
 		room.WithMethod(room.GET),
 		room.WithHeader(defaultHeader()),
 		room.WithDto(&TravelerinformationResponse{}),
 	)
 
-	if e != nil {
-		panic(e)
+	if err != nil {
+		panic(err)
 	}
 
 	return r
