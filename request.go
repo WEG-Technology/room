@@ -59,6 +59,41 @@ type BaseRequest struct {
 	dto              any
 }
 
+type ISoloRequest interface {
+	IRequest
+	Send() IResponse
+}
+
+func NewSoloRequest(baseUrl string, opts ...OptionRequest) ISoloRequest {
+	r, err := newRequest(opts...)
+
+	if err != nil {
+		panic(err)
+	}
+
+	return &SoloRequest{
+		BaseRequest: *r.(*BaseRequest),
+		baseUrl:     baseUrl,
+	}
+}
+
+type SoloRequest struct {
+	baseUrl string
+	BaseRequest
+}
+
+func (r *SoloRequest) Send() IResponse {
+	c, err := NewConnection(
+		WithBaseUrl(r.baseUrl),
+	)
+
+	if err != nil {
+		panic(err)
+	}
+
+	return c.Send(r)
+}
+
 func (r *BaseRequest) Cancel() {
 	if r.cancel != nil {
 		r.cancel()
