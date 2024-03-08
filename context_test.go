@@ -11,31 +11,31 @@ import (
 func TestContextBuilder_Build(t *testing.T) {
 	// Test case: Build context without a timeout
 	builderWithoutTimeout := NewContextBuilder(0)
-	ctxWithoutTimeout, cancelWithoutTimeout := builderWithoutTimeout.Build()
+	ctxWithoutTimeout := builderWithoutTimeout.Build()
 
 	// Check if the returned context is background and cancel function is nil
-	assert.Equal(t, context.Background(), ctxWithoutTimeout)
-	assert.Nil(t, cancelWithoutTimeout)
+	assert.Equal(t, context.Background(), ctxWithoutTimeout.ctx)
+	assert.Nil(t, ctxWithoutTimeout.cancel)
 
 	// Test case: Build context with a timeout
 	timeoutDuration := time.Second * 5
 	builderWithTimeout := NewContextBuilder(timeoutDuration)
-	ctxWithTimeout, cancelWithTimeout := builderWithTimeout.Build()
+	ctxWithTimeout := builderWithTimeout.Build()
 
 	// Check if the returned context is with a timeout and cancel function is not nil
-	assert.NotEqual(t, context.Background(), ctxWithTimeout)
-	assert.NotNil(t, cancelWithTimeout)
+	assert.NotEqual(t, context.Background(), ctxWithTimeout.ctx)
+	assert.NotNil(t, ctxWithTimeout.cancel)
 
 	// Check if the context is canceled after the specified timeout
 	select {
-	case <-ctxWithTimeout.Done():
+	case <-ctxWithTimeout.ctx.Done():
 		// Context is canceled, as expected
 	case <-time.After(timeoutDuration + time.Second): // Allow extra time for the context to be canceled
 		t.Error("Context is not canceled within the specified timeout")
 	}
 
 	// Ensure cancel function is called after the test
-	defer cancelWithTimeout()
+	defer ctxWithTimeout.cancel()
 }
 
 func TestContextBuilder_Timeout(t *testing.T) {

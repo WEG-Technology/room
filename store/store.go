@@ -1,4 +1,10 @@
-package room
+package store
+
+import (
+	"fmt"
+	"reflect"
+	"strings"
+)
 
 type IMap interface {
 	All() map[string]any
@@ -15,6 +21,7 @@ type IMap interface {
 	Each(callback func(key string, value any)) IMap
 	MergeIMap(m IMap) IMap
 	SetMultiple(data ...map[string]any) IMap
+	StringAll() string
 }
 
 func NewMapStore(defData ...map[string]any) IMap {
@@ -47,6 +54,25 @@ func (s *MapStore) Integer(key string) int {
 
 func (s *MapStore) String(key string) string {
 	return s.getValidData(key).(string)
+}
+
+func (s *MapStore) StringAll() string {
+	v := reflect.ValueOf(s.All())
+
+	if v.Kind() != reflect.Map {
+		return ""
+	}
+
+	var parts []string
+
+	keys := v.MapKeys()
+
+	for _, key := range keys {
+		value := v.MapIndex(key).Interface()
+		parts = append(parts, fmt.Sprintf("%v: %v", key.Interface(), value))
+	}
+
+	return strings.Join(parts, ", ")
 }
 
 func (s *MapStore) StringList(key string) []string {

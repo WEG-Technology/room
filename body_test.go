@@ -1,6 +1,8 @@
 package room
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestJsonBody_Parse(t *testing.T) {
 	data := map[string]interface{}{"key": "value"}

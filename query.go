@@ -1,6 +1,7 @@
 package room
 
 import (
+	"github.com/WEG-Technology/room/store"
 	"github.com/google/go-querystring/query"
 	"net/url"
 )
@@ -15,7 +16,7 @@ type IQuery interface {
 
 func NewQuery(v any) IQuery {
 	switch v := v.(type) {
-	case IMap:
+	case store.IMap:
 		return IMapQuery{v}
 	default:
 		return IUrlQuery{v}
@@ -23,7 +24,7 @@ func NewQuery(v any) IQuery {
 }
 
 type IMapQuery struct {
-	v IMap
+	v store.IMap
 }
 
 func (q IMapQuery) String() string {

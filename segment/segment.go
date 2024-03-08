@@ -1,4 +1,4 @@
-package room
+package segment
 
 import "time"
 

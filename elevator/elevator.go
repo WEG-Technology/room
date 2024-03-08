@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/WEG-Technology/room"
+	"github.com/WEG-Technology/room/segment"
+	"github.com/WEG-Technology/room/store"
 	"gopkg.in/yaml.v3"
 	"os"
 	"sync"
@@ -29,19 +31,19 @@ func marshalJson(config IntegrationConfig) (jsonData []byte, err error) {
 }
 
 type IElevatorEngine interface {
-	Execute(roomKey, requestKey string) room.IResponse
-	ExecuteConcurrent(concurrentKey string) map[string]room.IResponse
+	Execute(roomKey, requestKey string) (room.Response, error)
+	ExecuteConcurrent(concurrentKey string) map[string]room.Response
 	WarmUp() IElevatorEngine
 	PutBodyParser(roomKey, requestKey string, bodyParser room.IBodyParser) IElevatorEngine
 	PutQuery(roomKey, requestKey string, authStrategy room.IQuery) IElevatorEngine
-	PutAuthStrategy(roomKey string, authStrategy room.IAuthStrategy) IElevatorEngine
 	PutDTO(roomKey, requestKey string, dto any) IElevatorEngine
 	GetElapsedTime() float64
+	PutAuthStrategy(roomKey string, authStrategy room.IAuth) IElevatorEngine
 }
 
 type ElevatorEngine struct {
 	elevator       Elevator
-	Segment        room.ISegment
+	Segment        segment.ISegment
 	RoomContainers map[string]RoomContainer
 }
 
@@ -50,8 +52,8 @@ func (e *ElevatorEngine) GetElapsedTime() float64 {
 }
 
 type RoomContainer struct {
-	Room     room.IRoom
-	Requests map[string]room.IRequest
+	Room     room.IAuthRoom
+	Requests map[string]*room.Request
 }
 
 func NewElevatorEngine(elevator Elevator) IElevatorEngine {
@@ -61,43 +63,47 @@ func NewElevatorEngine(elevator Elevator) IElevatorEngine {
 }
 
 // TODO add safety check
-func (e *ElevatorEngine) Execute(roomKey, requestKey string) room.IResponse {
+func (e *ElevatorEngine) Execute(roomKey, requestKey string) (room.Response, error) {
 	if roomContainerEntry, ok := e.RoomContainers[roomKey]; ok {
 		if requestEntry, ok := roomContainerEntry.Requests[requestKey]; ok {
 			return roomContainerEntry.Room.Send(requestEntry)
 		}
+		panic(fmt.Sprintf("engine for %s on %s not configured", roomKey, requestKey))
 	}
 
-	panic("engine not configured")
+	panic(fmt.Sprintf("engine for %s not configured", roomKey))
 }
 
 type RoomResponseContainer struct {
-	Responses map[string]room.IResponse
+	Responses map[string]room.Response
 	mu        sync.Mutex
 }
 
-func (c *RoomResponseContainer) PutResponse(key string, response room.IResponse) {
+func (c *RoomResponseContainer) PutResponse(key string, response room.Response) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.Responses[key] = response
 }
 
-func (e *ElevatorEngine) ExecuteConcurrent(concurrentKey string) map[string]room.IResponse {
-	e.Segment = room.StartSegmentNow()
+func (e *ElevatorEngine) ExecuteConcurrent(concurrentKey string) map[string]room.Response {
+	e.Segment = segment.StartSegmentNow()
 	defer e.Segment.End()
 
 	responseContainer := RoomResponseContainer{
-		Responses: map[string]room.IResponse{},
+		Responses: map[string]room.Response{},
 	}
 
 	var wg sync.WaitGroup
 
 	for roomKey, configRoom := range e.elevator.Config.Flat.Rooms {
-		for requestKey, request := range configRoom.Requests {
-			if concurrentKey == request.ConcurrentKey {
+		for requestKey, req := range configRoom.Requests {
+			if concurrentKey == req.ConcurrentKey {
 				wg.Add(1)
 				go func(a, b string) {
-					responseContainer.PutResponse(a, e.Execute(a, b))
+					//TODO handle errors
+					res, _ := e.Execute(a, b)
+
+					responseContainer.PutResponse(a, res)
 					wg.Done()
 				}(roomKey, requestKey)
 			}
@@ -114,27 +120,27 @@ func (e *ElevatorEngine) WarmUp() IElevatorEngine {
 	roomContainers := map[string]RoomContainer{}
 
 	for roomKey, r := range e.elevator.Config.Flat.Rooms {
-		c, err := room.NewConnection(
-			room.WithBaseUrl(r.Connection.BaseURL),
-			room.WithDefaultHeader(room.NewHeader(room.NewMapStore(r.Connection.Headers))),
-			room.WithTimeout(time.Duration(r.Connection.Timeout)*time.Second),
+		c := room.NewConnector(
+			r.Connection.BaseURL,
+			room.WithHeaderConnector(room.NewHeader(store.NewMapStore(r.Connection.Headers))),
+			room.WithHeaderContextBuilder(room.NewContextBuilder(time.Duration(r.Connection.Timeout)*time.Second)),
 		)
 
-		if err != nil {
-			panic(err)
+		var roomObj room.IAuthRoom
+
+		if r.Connection.Auth.Type == "bearer" {
+			roomObj = room.NewAuthRoom(c, nil, e.CreateRequest(r.Connection.Auth.Request))
+		} else {
+			roomObj = room.NewAuthRoom(c, nil, nil)
 		}
 
 		roomContainers[roomKey] = RoomContainer{
-			Room:     room.NewRoom(c),
-			Requests: map[string]room.IRequest{},
+			Room:     roomObj,
+			Requests: map[string]*room.Request{},
 		}
 
-		for requestKey, request := range r.Requests {
-			roomContainers[roomKey].Requests[requestKey] = e.CreateRequest(request)
-
-			if r.Connection.Auth.Type == "bearer" {
-				roomContainers[roomKey].Requests[requestKey].PutPreRequest(e.CreateRequest(r.Connection.Auth.Request))
-			}
+		for requestKey, req := range r.Requests {
+			roomContainers[roomKey].Requests[requestKey] = e.CreateRequest(req)
 		}
 	}
 
@@ -143,27 +149,26 @@ func (e *ElevatorEngine) WarmUp() IElevatorEngine {
 	return e
 }
 
-func (e *ElevatorEngine) CreateRequest(request Request) room.IRequest {
+func (e *ElevatorEngine) CreateRequest(req Request) *room.Request {
 	var parser room.IBodyParser
 	//TODO expand here
-	switch request.Body.Type {
+	switch req.Body.Type {
 	case "json":
-		parser = room.NewJsonBodyParser(request.Body.Content)
+		parser = room.NewJsonBodyParser(req.Body.Content)
 	case "form":
-		parser = room.NewFormURLEncodedBodyParser(request.Body.Content)
+		parser = room.NewFormURLEncodedBodyParser(req.Body.Content)
 	default:
 		parser = nil
 	}
 
-	r, err := room.NewRequest(
-		//TODO use unmarshall to get the method instead of hardcoding
-		room.WithMethod(room.HTTPMethod(request.Method)),
-		room.WithEndPoint(request.Path),
+	r := room.NewRequest(
+		req.Path,
+		room.WithMethod(room.HTTPMethod(req.Method)),
 		room.WithBody(parser),
 	)
 
-	if err != nil {
-		panic(err)
+	if req.ForceDTO {
+		r.ForceDTO = true
 	}
 
 	return r
@@ -172,7 +177,7 @@ func (e *ElevatorEngine) CreateRequest(request Request) room.IRequest {
 func (e *ElevatorEngine) PutBodyParser(roomKey, requestKey string, bodyParser room.IBodyParser) IElevatorEngine {
 	if roomContainerEntry, ok := e.RoomContainers[roomKey]; ok {
 		if requestEntry, ok := roomContainerEntry.Requests[requestKey]; ok {
-			requestEntry.PutBodyParser(bodyParser)
+			requestEntry.BodyParser = bodyParser
 			return e
 		}
 		panic(fmt.Sprintf("engine for %s on %s not configured", roomKey, requestKey))
@@ -184,7 +189,7 @@ func (e *ElevatorEngine) PutBodyParser(roomKey, requestKey string, bodyParser ro
 func (e *ElevatorEngine) PutQuery(roomKey, requestKey string, query room.IQuery) IElevatorEngine {
 	if roomContainerEntry, ok := e.RoomContainers[roomKey]; ok {
 		if requestEntry, ok := roomContainerEntry.Requests[requestKey]; ok {
-			requestEntry.PutQuery(query)
+			requestEntry.Query = query
 			return e
 		}
 		panic(fmt.Sprintf("engine for %s on %s not configured", roomKey, requestKey))
@@ -193,9 +198,9 @@ func (e *ElevatorEngine) PutQuery(roomKey, requestKey string, query room.IQuery)
 	panic(fmt.Sprintf("engine for %s not configured", roomKey))
 }
 
-func (e *ElevatorEngine) PutAuthStrategy(roomKey string, authStrategy room.IAuthStrategy) IElevatorEngine {
+func (e *ElevatorEngine) PutAuthStrategy(roomKey string, authStrategy room.IAuth) IElevatorEngine {
 	if roomContainerEntry, ok := e.RoomContainers[roomKey]; ok {
-		roomContainerEntry.Room.PutAuthStrategy(authStrategy)
+		roomContainerEntry.Room.SetAuthStrategy(authStrategy)
 		return e
 	}
 
@@ -205,7 +210,7 @@ func (e *ElevatorEngine) PutAuthStrategy(roomKey string, authStrategy room.IAuth
 func (e *ElevatorEngine) PutDTO(roomKey, requestKey string, dto any) IElevatorEngine {
 	if roomContainerEntry, ok := e.RoomContainers[roomKey]; ok {
 		if requestEntry, ok := roomContainerEntry.Requests[requestKey]; ok {
-			requestEntry.PutDTO(dto)
+			requestEntry.DTO = dto
 			return e
 		}
 		panic(fmt.Sprintf("engine for %s on %s not configured", roomKey, requestKey))
@@ -292,6 +297,7 @@ type Request struct {
 	ConcurrentKey string `yaml:"concurrentKey"`
 	Method        string `yaml:"method"`
 	Path          string `yaml:"path"`
+	ForceDTO      bool   `yaml:"forceDTO"`
 	Body          Body   `yaml:"body"`
 }
 
@@ -306,4 +312,14 @@ type Flat struct {
 
 type IntegrationConfig struct {
 	Flat Flat `yaml:"flat"`
+}
+
+func (r *IntegrationConfig) UnmarshalJSON(data []byte) error {
+	var res IntegrationConfig
+
+	if err := json.Unmarshal(data, &res); err != nil {
+		return err
+	}
+
+	return nil
 }

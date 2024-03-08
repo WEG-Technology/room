@@ -35,7 +35,8 @@ func main() {
 
 	for i, res := range responses {
 		fmt.Println(fmt.Sprintf("response for %s", i))
-		fmt.Println("Header", res.RequestHeader().Properties())
-		fmt.Println("Ok", res.Ok())
+		fmt.Println("Header", res.Header)
+		fmt.Println("Ok", res.OK())
+		fmt.Println("-----------------")
 	}
 }

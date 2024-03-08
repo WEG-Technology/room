@@ -1,8 +1,9 @@
 package room
 
 import (
-	"context"
 	"net/http"
+	"strings"
+	"time"
 )
 
 const (
@@ -13,301 +14,150 @@ const (
 	headerValueTextXML         = "text/xml"
 )
 
-type IRequest interface {
-	Create() IRequest
-	Cancel()
-	Request() *http.Request
-	Dto() any
-	Header() IHeader
-	PreRequest() IRequest
-	SetConnectionConfig(connectionConfig IConnectionConfig) IRequest
-	SetHeaders(headers IMap) IRequest
-	PutHeaderProperties(header IHeader) IRequest
-	PutBodyParser(bodyParser IBodyParser) IRequest
-	PutQuery(query IQuery) IRequest
-	PutPreRequest(preRequest IRequest) IRequest
-	PutDTO(dto any) IRequest
-	InjectHeader()
-	NewRequestWithContext() (err error)
-	InitContext()
-	QueryString() string
-	url() string
+type ISend interface {
+	Send() Response
 }
 
-type IRequestObserver interface {
-	OnCreate(request IRequest)
-	OnCreated(request IRequest)
+type Request struct {
+	path           string
+	uri            URI
+	method         HTTPMethod
+	Header         IHeader
+	Query          IQuery
+	BodyParser     IBodyParser
+	contextBuilder IContextBuilder
+	DTO            any
+	// ForceDTO is a flag to force the parse http response to DTO which is map[string]any
+	ForceDTO bool
 }
 
-type requestObserver struct{}
-
-func (o requestObserver) OnCreated(request IRequest) {}
-func (o requestObserver) OnCreate(request IRequest)  {}
-
-type BaseRequest struct {
-	method           HTTPMethod
-	R                *http.Request
-	ctx              context.Context
-	cancel           context.CancelFunc
-	header           IHeader
-	query            IQuery
-	connectionConfig IConnectionConfig
-	observer         IRequestObserver
-	contextBuilder   IContextBuilder
-	bodyParser       IBodyParser
-	preRequest       IRequest
-	endPoint         string
-	dto              any
-}
-
-type ISoloRequest interface {
-	IRequest
-	Send() IResponse
-}
-
-func NewSoloRequest(baseUrl string, opts ...OptionRequest) ISoloRequest {
-	r, err := newRequest(opts...)
-
-	if err != nil {
-		panic(err)
+// NewRequest creates a new request
+// baseUrl: the base url ex: http://localhost:8080, http://localhost/path, path/, path?lorem=ipsum
+// opts: options to configure the request
+func NewRequest(path string, opts ...OptionRequest) *Request {
+	r := &Request{
+		path: path,
 	}
-
-	return &SoloRequest{
-		BaseRequest: *r.(*BaseRequest),
-		baseUrl:     baseUrl,
-	}
-}
-
-type SoloRequest struct {
-	baseUrl string
-	BaseRequest
-}
-
-func (r *SoloRequest) Send() IResponse {
-	c, err := NewConnection(
-		WithBaseUrl(r.baseUrl),
-	)
-
-	if err != nil {
-		panic(err)
-	}
-
-	return c.Send(r)
-}
-
-func (r *BaseRequest) Cancel() {
-	if r.cancel != nil {
-		r.cancel()
-	}
-}
-
-func newRequest(opts ...OptionRequest) (IRequest, error) {
-	r := new(BaseRequest)
 
 	for _, opt := range opts {
 		opt(r)
 	}
 
-	if r.header == nil {
-		r.header = NewHeader(NewMapStore())
+	if r.BodyParser == nil {
+		r.BodyParser = dumpBody{}
 	}
 
-	if r.query == nil {
-		r.query = NewQuery(NewMapStore())
+	if r.method == "" {
+		r.method = GET
 	}
-
-	if r.observer == nil {
-		r.observer = requestObserver{}
-	}
-
-	if r.bodyParser == nil {
-		r.bodyParser = dumpBody{}
-	}
-
-	//TODO handle endpoint when its nil
-	if r.connectionConfig == nil {
-		r.connectionConfig = DefaultConnectionConfig()
-	}
-
-	if r.contextBuilder == nil {
-		r.contextBuilder = NewContextBuilder(r.connectionConfig.TimeoutDuration())
-	}
-
-	return r, nil
-}
-
-// deprecated will be removed in the future
-func NewGetRequest(opts ...OptionRequest) (IRequest, error) {
-	return newRequest(opts...)
-}
-
-func NewRequest(opts ...OptionRequest) (IRequest, error) {
-	return newRequest(opts...)
-}
-
-func NewPostRequest(opts ...OptionRequest) (IRequest, error) {
-	return newRequest(append(opts, WithMethod(POST))...)
-}
-
-func NewPutRequest(opts ...OptionRequest) (IRequest, error) {
-	return newRequest(append(opts, WithMethod(PUT))...)
-}
-
-func NewDeleteRequest(opts ...OptionRequest) (IRequest, error) {
-	return newRequest(append(opts, WithMethod(DELETE))...)
-}
-
-func (r *BaseRequest) Create() IRequest {
-	r.observer.OnCreate(r)
-
-	r.InitContext()
-
-	r.header.Merge(r.connectionConfig.DefaultHeader())
-
-	err := r.NewRequestWithContext()
-
-	if err != nil {
-		panic(err)
-	}
-
-	r.InjectHeader()
-
-	r.observer.OnCreated(r)
 
 	return r
 }
 
-func (r *BaseRequest) InitContext() {
-	r.ctx, r.cancel = r.contextBuilder.Build()
-}
+func (r *Request) Send() (Response, error) {
+	c := new(http.Client)
 
-func (r *BaseRequest) InjectHeader() {
-	r.header.Properties().Each(func(key string, value any) {
-		r.R.Header.Add(key, value.(string))
-	})
-}
+	response, e := c.Do(r.request())
 
-func (r *BaseRequest) NewRequestWithContext() (err error) {
-	r.R, err = http.NewRequestWithContext(r.ctx, r.method.String(), r.url(), r.bodyParser.Parse())
-
-	return err
-}
-
-func (r *BaseRequest) Request() *http.Request {
-	return r.R
-}
-
-func (r *BaseRequest) Dto() any {
-	return r.dto
-}
-
-func (r *BaseRequest) Header() IHeader {
-	return r.header
-}
-
-func (r *BaseRequest) PreRequest() IRequest {
-	if preRequest := r.connectionConfig.PreRequest(); preRequest != nil {
-		return preRequest
+	if e != nil {
+		return Response{}, e
 	}
 
-	return r.preRequest
+	return NewResponse(response, r.ForceDTO)
 }
 
-func (r *BaseRequest) SetConnectionConfig(connectionConfig IConnectionConfig) IRequest {
-	r.connectionConfig = connectionConfig
+func (r *Request) request() *http.Request {
+	var context Context
 
-	//TODO make an observer for changes of few fields
-	r.contextBuilder = NewContextBuilder(r.connectionConfig.TimeoutDuration())
-	return r
-}
-
-func (r *BaseRequest) SetHeaders(headers IMap) IRequest {
-	headers.Each(func(key string, value any) {
-		r.R.Header.Add(key, value.(string))
-	})
-
-	return r
-}
-
-func (r *BaseRequest) PutHeaderProperties(header IHeader) IRequest {
-	r.header.Merge(header)
-	return r
-}
-
-func (r *BaseRequest) PutBodyParser(bodyParser IBodyParser) IRequest {
-	r.bodyParser = bodyParser
-	return r
-}
-
-func (r *BaseRequest) PutQuery(query IQuery) IRequest {
-	r.query = query
-	return r
-}
-
-func (r *BaseRequest) PutPreRequest(preRequest IRequest) IRequest {
-	r.preRequest = preRequest
-	return r
-}
-
-func (r *BaseRequest) PutDTO(dto any) IRequest {
-	r.dto = dto
-	return r
-}
-
-func (r *BaseRequest) url() string {
-	return r.connectionConfig.BaseUrl() + r.endPoint + r.QueryString()
-}
-
-func (r *BaseRequest) QueryString() string {
-	str := r.query.String()
-
-	if str == "" {
-		return ""
+	if r.contextBuilder != nil {
+		context = r.contextBuilder.Build()
+	} else {
+		context = NewContextBuilder(30 * time.Second).Build()
 	}
 
-	return "?" + r.query.String()
-}
-
-type OptionRequest func(request *BaseRequest)
-
-func WithEndPoint(endPoint string) OptionRequest {
-	return func(request *BaseRequest) {
-		request.endPoint = endPoint
+	if r.Query != nil && r.Query.String() != "" {
+		r.uri = NewURI(r.path + "?" + r.Query.String())
+	} else {
+		r.uri = NewURI(r.path)
 	}
+
+	req, _ := http.NewRequestWithContext(context.ctx, r.method.String(), r.uri.String(), r.BodyParser.Parse())
+
+	if r.Header != nil {
+		r.Header.Properties().Each(func(k string, v any) {
+			req.Header.Add(k, v.(string))
+		})
+	}
+
+	return req
 }
+
+func (r *Request) initBaseUrl(baseUrl string) *Request {
+	if strings.HasPrefix(r.path, "/") {
+		r.path = r.path[1:]
+	}
+
+	if strings.HasSuffix(baseUrl, "/") {
+		baseUrl = baseUrl[:len(baseUrl)-1]
+	}
+
+	r.path = baseUrl + "/" + r.path
+
+	return r
+}
+
+func (r *Request) mergeHeader(header IHeader) *Request {
+	if header != nil {
+		if r.Header == nil {
+			r.Header = header
+		} else {
+			r.Header.Merge(header)
+		}
+	}
+
+	return r
+}
+
+type OptionRequest func(request *Request)
 
 func WithMethod(method HTTPMethod) OptionRequest {
-	return func(request *BaseRequest) {
+	return func(request *Request) {
 		request.method = method
 	}
 }
 
 func WithBody(bodyParser IBodyParser) OptionRequest {
-	return func(request *BaseRequest) {
-		request.bodyParser = bodyParser
+	return func(request *Request) {
+		request.BodyParser = bodyParser
 	}
 }
 
 func WithQuery(query IQuery) OptionRequest {
-	return func(request *BaseRequest) {
-		request.query = query
+	return func(request *Request) {
+		request.Query = query
 	}
 }
 
 func WithHeader(header IHeader) OptionRequest {
-	return func(request *BaseRequest) {
-		request.header = header
+	return func(request *Request) {
+		request.Header = header
 	}
 }
 
-func WithDto(dto any) OptionRequest {
-	return func(request *BaseRequest) {
-		request.dto = dto
+func WithDTO(dto any) OptionRequest {
+	return func(request *Request) {
+		request.DTO = dto
+	}
+}
+
+func ForceDTO() OptionRequest {
+	return func(request *Request) {
+		request.ForceDTO = true
 	}
 }
 
 func WithContextBuilder(contextBuilder IContextBuilder) OptionRequest {
-	return func(request *BaseRequest) {
+	return func(request *Request) {
 		request.contextBuilder = contextBuilder
 	}
 }

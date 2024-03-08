@@ -1,6 +1,7 @@
 package room
 
 import (
+	"github.com/WEG-Technology/room/store"
 	"github.com/stretchr/testify/assert"
 	"net/url"
 	"testing"
@@ -9,7 +10,7 @@ import (
 // Test cases for Query, IMapQuery, and IUrlQuery
 func TestNewQuery(t *testing.T) {
 	// Create a new Query with an IMap
-	mockMap := NewMapStore()
+	mockMap := store.NewMapStore()
 	query := NewQuery(mockMap)
 
 	// Check if the created query is of type IMapQuery
@@ -26,7 +27,7 @@ func TestNewQuery(t *testing.T) {
 
 func TestIMapQuery_String(t *testing.T) {
 	// Create a new IMapQuery with a mock map
-	mockMap := NewMapStore(map[string]interface{}{"key1": "value1", "key2": "value2"})
+	mockMap := store.NewMapStore(map[string]interface{}{"key1": "value1", "key2": "value2"})
 	iMapQuery := IMapQuery{v: mockMap}
 
 	// Get the string representation of the IMapQuery

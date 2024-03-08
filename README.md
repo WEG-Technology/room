@@ -47,78 +47,9 @@ Your client wrapper should implement IRoom. You can implement your custom interf
 There is an example of this explanation in `./examples/room_example`
 
 #### Step By Step Usage
-Let's say u have `https://dummyjson.com` api and you want to wrap it with Room package.
+Currently `./examples` folder is the best place to look for examples.
 
-1- Create your `connection.go` file
-```go
-func NewConnection() room.IConnection {
-    c, err := room.NewConnection( // you can use room.NewConnectionWithClient to use your custom http client
-            room.WithBaseUrl("https://dummyjson.com"), // base url of your api
-	    ),
-    )
-
-    if err != nil {
-        panic(err) // you can handle error here
-    }
-
-    return Connection{c}
-}
-```
-
-2- Create your `requests.go` file
-```go
-// AddTODORequest is a request to add to do
-func NewAddTODORequest(params AddTODORequest) room.IRequest {
-	r, err := room.NewPostRequest( // you can use room.NewGetRequest, room.NewPutRequest, room.NewDeleteRequest
-		room.WithEndPoint("todos/add"), // endpoint of your request
-		room.WithDto(&AddTODOResponse{}), // if you want to get response as a struct
-		room.WithBody(room.NewJsonBodyParser(params)), // if you want to send request as a json
-	)
-
-	if err != nil {
-		panic(err) // you can handle error here
-	}
-
-	return r
-}
-```
-
-3- Create your `responses.go` file
-```go
-// AddTODOResponse is a response of add to do
-type AddTODOResponse struct {
-    ID int `json:"id"`
-}
-```
-
-4- Create your `room.go` file
-```go
-// Room is a wrapper of dummyjson api
-type DummyJsonClient struct {
-	*room.Room // you can implement your custom interfaces by wrapping base Room struct
-}
-// AddTODO is a request to add to do
-func (r DummyJsonClient) AddTODO(parameters AddTODORequest) room.IResponse {
-	return r.Send(NewAddTODORequest(parameters)) // you can use r.Send to send your request
-}
-// NewRoom is a constructor of DummyJsonClient
-func NewRoom() DummyJsonClient {
-	return DummyJsonClient{room.NewRoom( // you can use room.NewRoom() to use your custom http client
-		NewConnection(), // your connection
-	)}
-}
-```
-
-5- Use your client
-```go
-func main() {
-    client := NewRoom() // create your client
-    response := client.AddTODO(AddTODORequest{ // send your request
-        Title: "Hello World", // your request parameters
-    })
-    fmt.Println(response.GetDto().(*AddTODOResponse).ID)
-}
-```
+```TODO```
 
 
 ## 📫 Contributing

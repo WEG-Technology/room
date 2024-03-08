@@ -6,7 +6,9 @@ import (
 )
 
 func main() {
-	response, err := room.NewRequest("https://jsonplaceholder.typicode.com/posts/1").Send()
+	c := room.NewConnector("https://jsonplaceholder.typicode.com")
+
+	response, err := c.Send("posts/1")
 
 	fmt.Println(err)
 

@@ -1,65 +1,68 @@
 package room
 
 type IRoom interface {
-	Send(request IRequest) IResponse
-	PutAuthStrategy(auth IAuthStrategy)
-	GetSegment() ISegment
+	Send(request *Request) (Response, error)
+}
+
+type IAuthRoom interface {
+	Send(request *Request) (Response, error)
+	SetAuthStrategy(auth IAuth)
 }
 
 type Room struct {
-	connection   IConnection
-	authStrategy IAuthStrategy
-	segment      ISegment
+	Connector *Connector
 }
 
-func (r *Room) PutAuthStrategy(authStrategy IAuthStrategy) {
-	r.authStrategy = authStrategy
+func NewRoom(connector *Connector) *Room {
+	return &Room{Connector: connector}
 }
 
-func (r *Room) Send(request IRequest) IResponse {
-	r.segment = StartSegmentNow()
-	defer r.segment.End()
+func (r *Room) Send(request *Request) (Response, error) {
+	return r.Connector.Do(request)
+}
 
-	if request.PreRequest() != nil {
-		response := r.connection.Send(request.PreRequest())
+type AuthRoom struct {
+	*Room
+	AuthRequest  *Request
+	AuthStrategy IAuth
+}
 
-		if !response.Ok() {
-			return response
+func NewAuthRoom(connector *Connector, auth IAuth, authRequest *Request) IAuthRoom {
+	return &AuthRoom{
+		Room:         &Room{Connector: connector},
+		AuthRequest:  authRequest,
+		AuthStrategy: auth,
+	}
+}
+
+func (r *AuthRoom) Send(request *Request) (Response, error) {
+	if r.AuthRequest != nil {
+		response, err := r.Connector.Do(r.AuthRequest)
+
+		if err != nil {
+			return response, err
 		}
 
-		if r.authStrategy != nil {
-			err := r.authStrategy.Authenticate(request, response)
+		r.AuthStrategy.Apply(r.Connector, response)
 
-			if err != nil {
-				return response
-			}
+		if !response.OK() {
+			return response, err
 		}
 	}
 
-	response := r.connection.Send(request)
-
-	return response
+	return r.Room.Send(request)
 }
 
-func (r *Room) GetSegment() ISegment {
-	return r.segment
+func (r *AuthRoom) SetAuthStrategy(auth IAuth) {
+	r.AuthStrategy = auth
 }
 
-type OptionRoom func(request *Room)
-
-func WithAuth(auth IAuthStrategy) OptionRoom {
-	return func(room *Room) {
-		room.authStrategy = auth
-	}
+type IAuth interface {
+	Apply(connector *Connector, response Response)
 }
 
-func NewRoom(connection IConnection, opts ...OptionRoom) *Room {
-	r := new(Room)
-	r.connection = connection
+type AccessTokenAuth struct{}
 
-	for _, opt := range opts {
-		opt(r)
-	}
-
-	return r
+func (a AccessTokenAuth) Apply(connector *Connector, response Response) {
+	connector.Header.Add("Authorization", "Bearer "+response.DTO.(map[string]any)["access_token"].(string))
 }

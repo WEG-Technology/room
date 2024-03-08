@@ -1,14 +1,17 @@
 package room
 
+import "github.com/WEG-Technology/room/store"
+
 type IHeader interface {
-	Properties() IMap
+	Properties() store.IMap
 	Add(key string, value string) IHeader
 	Get(key string) string
 	Merge(header IHeader) IHeader
+	String() string
 }
 
 type Header struct {
-	properties IMap
+	properties store.IMap
 }
 
 func (h *Header) Add(key string, value string) IHeader {
@@ -35,13 +38,17 @@ func (h *Header) Merge(header IHeader) IHeader {
 	return h
 }
 
-func (h *Header) Properties() IMap {
+func (h *Header) Properties() store.IMap {
 	return h.properties
 }
 
-func NewHeader(properties ...IMap) IHeader {
+func (h *Header) String() (str string) {
+	return h.Properties().StringAll()
+}
+
+func NewHeader(properties ...store.IMap) IHeader {
 	if len(properties) == 0 {
-		return &Header{NewMapStore()}
+		return &Header{store.NewMapStore()}
 	}
 
 	return &Header{properties[0]}

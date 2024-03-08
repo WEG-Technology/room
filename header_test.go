@@ -1,6 +1,7 @@
 package room
 
 import (
+	"github.com/WEG-Technology/room/store"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -73,7 +74,7 @@ func TestNewHeader(t *testing.T) {
 	assert.NotNil(t, header.Properties())
 
 	// Create a new Header with a specified properties map
-	properties := NewMapStore()
+	properties := store.NewMapStore()
 	properties.Add("Key1", "Value1")
 	properties.Add("Key2", "Value2")
 	headerWithProperties := NewHeader(properties)

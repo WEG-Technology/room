@@ -5,21 +5,34 @@ import (
 	"time"
 )
 
+type Context struct {
+	ctx    context.Context
+	cancel context.CancelFunc
+}
+
 type IContextBuilder interface {
 	Timeout() time.Duration
-	Build() (context.Context, context.CancelFunc)
+	Build() Context
 }
 
 type ContextBuilder struct {
 	timeout time.Duration
 }
 
-func (b ContextBuilder) Build() (context.Context, context.CancelFunc) {
+func (b ContextBuilder) Build() Context {
 	if b.Timeout() == 0 {
-		return context.Background(), nil
+		return Context{
+			ctx:    context.Background(),
+			cancel: nil,
+		}
 	}
 
-	return context.WithTimeout(context.Background(), b.Timeout())
+	ctx, cancel := context.WithTimeout(context.Background(), b.Timeout())
+
+	return Context{
+		ctx:    ctx,
+		cancel: cancel,
+	}
 }
 
 func (b ContextBuilder) Timeout() time.Duration {
