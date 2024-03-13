@@ -1,0 +1,79 @@
+name: OpenSource CI/CD
+
+# Controls when the action will run. Triggers the workflow on push or pull request
+# events but only for the master branch
+on:
+  push:
+    branches:
+      - master
+      - main
+      - staging
+      - develop
+  pull_request:
+    branches:
+      - master
+      - main
+      - staging
+      - develop
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: "1.21.4"
+
+      - name: Run build
+        run: go build .
+
+  lint:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: "1.21.4"
+
+      - name: Install linters
+        run: |
+          go install golang.org/x/lint/golint@latest
+          go install github.com/fzipp/gocyclo/cmd/gocyclo@latest
+          go install github.com/client9/misspell/cmd/misspell@latest
+          go install github.com/gordonklaus/ineffassign@latest
+        # go install github.com/securego/gosec/cmd/gosec@latest
+
+      - name: Run golint
+        run: |
+          echo "Starting golint..."
+          golint ./...
+          echo "Completed golint"
+
+      - name: Run gocyclo
+        run: |
+          echo "Starting gocyclo..."
+          gocyclo -over 15 .
+          echo "Completed gocyclo"
+
+      - name: Run misspell
+        run: |
+          echo "Starting misspell..."
+          misspell -error .
+          echo "Completed misspell"
+
+      - name: Run ineffassign
+        run: |
+          echo "Starting ineffassign..."
+          ineffassign .
+          echo -e "\033[32mCompleted ineffassign\033[0m"
+
+      # - name: Run gosec
+      #   run: gosec ./...
