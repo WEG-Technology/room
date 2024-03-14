@@ -11,7 +11,6 @@ type Context struct {
 }
 
 type IContextBuilder interface {
-	Timeout() time.Duration
 	Build() Context
 }
 
@@ -20,23 +19,19 @@ type ContextBuilder struct {
 }
 
 func (b ContextBuilder) Build() Context {
-	if b.Timeout() == 0 {
+	if b.timeout == 0 {
 		return Context{
 			Ctx:    context.Background(),
 			Cancel: nil,
 		}
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), b.Timeout())
+	ctx, cancel := context.WithTimeout(context.Background(), b.timeout)
 
 	return Context{
 		Ctx:    ctx,
 		Cancel: cancel,
 	}
-}
-
-func (b ContextBuilder) Timeout() time.Duration {
-	return b.timeout
 }
 
 func NewContextBuilder(timeout time.Duration) ContextBuilder {
