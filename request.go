@@ -81,7 +81,7 @@ func (r *Request) request() *http.Request {
 		r.uri = NewURI(r.path)
 	}
 
-	req, _ := http.NewRequestWithContext(context.ctx, r.method.String(), r.uri.String(), r.BodyParser.Parse())
+	req, _ := http.NewRequestWithContext(context.Ctx, r.method.String(), r.uri.String(), r.BodyParser.Parse())
 
 	if r.Header != nil {
 		r.Header.Properties().Each(func(k string, v any) {
