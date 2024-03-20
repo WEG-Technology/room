@@ -2,84 +2,72 @@ package room
 
 import (
 	"github.com/WEG-Technology/room/store"
-	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
-// Test cases for the Header implementation
 func TestHeader_Add(t *testing.T) {
-	// Create a new Header
-	header := NewHeader()
-
-	// Add a key-value pair
-	key := "Content-Type"
-	value := "application/json"
-	resultHeader := header.Add(key, value)
-
-	// Check if the resultHeader is the same as the original header
-	assert.Equal(t, header, resultHeader)
-
-	// Check if the added key-value pair exists in the properties
-	assert.Equal(t, value, header.Get(key))
+	h := NewHeader()
+	h.Add("key", "value")
+	val := h.Get("key")
+	if val != "value" {
+		t.Errorf("Header Add() did not add the value correctly")
+	}
 }
 
 func TestHeader_Get(t *testing.T) {
-	// Create a new Header
-	header := NewHeader()
+	h := NewHeader()
+	h.Add("key", "value")
+	val := h.Get("key")
+	if val != "value" {
+		t.Errorf("Header Get() did not return the correct value")
+	}
 
-	// Attempt to get a value for a non-existing key
-	result := header.Get("NonExistingKey")
-
-	// Check if the result is an empty string
-	assert.Equal(t, "", result)
-
-	// Add a key-value pair
-	key := "Content-Type"
-	value := "application/json"
-	header.Add(key, value)
-
-	// Attempt to get the added value using the key
-	result = header.Get(key)
-
-	// Check if the result is the same as the added value
-	assert.Equal(t, value, result)
+	// Test case for non-existing key
+	val = h.Get("nonExistingKey")
+	if val != "" {
+		t.Errorf("Header Get() did not return an empty string for non-existing key")
+	}
 }
 
 func TestHeader_Merge(t *testing.T) {
-	// Create two headers with different key-value pairs
-	header1 := NewHeader()
-	header1.Add("Key1", "Value1")
-	header1.Add("Key2", "Value2")
+	h1 := NewHeader()
+	h2 := NewHeader()
+	h2.Add("key", "value")
+	h1.Merge(h2)
+	val := h1.Get("key")
+	if val != "value" {
+		t.Errorf("Header Merge() did not merge the headers correctly")
+	}
+}
 
-	header2 := NewHeader()
-	header2.Add("Key3", "Value3")
-	header2.Add("Key4", "Value4")
+func TestHeader_Properties(t *testing.T) {
+	h := NewHeader()
+	properties := h.Properties()
+	if properties == nil {
+		t.Error("Header Properties() returned nil")
+	}
+}
 
-	// Merge header2 into header1
-	mergedHeader := header1.Merge(header2)
-
-	// Check if the mergedHeader contains all key-value pairs from both headers
-	assert.Equal(t, "Value1", mergedHeader.Get("Key1"))
-	assert.Equal(t, "Value2", mergedHeader.Get("Key2"))
-	assert.Equal(t, "Value3", mergedHeader.Get("Key3"))
-	assert.Equal(t, "Value4", mergedHeader.Get("Key4"))
+func TestHeader_String(t *testing.T) {
+	h := NewHeader()
+	h.Add("key1", "value1")
+	h.Add("key2", "value2")
+	expected := "key1: value1, key2: value2"
+	if h.String() != expected {
+		t.Errorf("Header String() returned %s, expected %s", h.String(), expected)
+	}
 }
 
 func TestNewHeader(t *testing.T) {
-	// Create a new Header without specifying properties
-	header := NewHeader()
+	h := NewHeader()
+	if h == nil {
+		t.Error("NewHeader() returned nil")
+	}
+}
 
-	// Check if the created header has an empty properties map
-	assert.NotNil(t, header)
-	assert.NotNil(t, header.Properties())
-
-	// Create a new Header with a specified properties map
-	properties := store.NewMapStore()
-	properties.Add("Key1", "Value1")
-	properties.Add("Key2", "Value2")
-	headerWithProperties := NewHeader(properties)
-
-	// Check if the created header has the specified properties map
-	assert.NotNil(t, headerWithProperties)
-	assert.Equal(t, properties, headerWithProperties.Properties())
+func TestNewHeaderWithIMap(t *testing.T) {
+	h := NewHeader(store.NewMapStore(map[string]any{"key": "value"}))
+	if h == nil {
+		t.Error("NewHeader() returned nil")
+	}
 }

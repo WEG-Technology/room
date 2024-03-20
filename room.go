@@ -1,12 +1,13 @@
 package room
 
+import "errors"
+
+const (
+	ErrAuthRoomCanNotFoundKey = "authToken can not found in response"
+)
+
 type IRoom interface {
 	Send(request *Request) (Response, error)
-}
-
-type IAuthRoom interface {
-	Send(request *Request) (Response, error)
-	SetAuthStrategy(auth IAuth)
 }
 
 type Room struct {
@@ -23,15 +24,15 @@ func (r *Room) Send(request *Request) (Response, error) {
 
 type AuthRoom struct {
 	*Room
-	AuthRequest  *Request
-	AuthStrategy IAuth
+	AuthRequest *Request
+	AuthToken   string
 }
 
-func NewAuthRoom(connector *Connector, auth IAuth, authRequest *Request) IAuthRoom {
+func NewAuthRoom(connector *Connector, authRequest *Request, authToken string) IRoom {
 	return &AuthRoom{
-		Room:         &Room{Connector: connector},
-		AuthRequest:  authRequest,
-		AuthStrategy: auth,
+		Room:        &Room{Connector: connector},
+		AuthRequest: authRequest,
+		AuthToken:   authToken,
 	}
 }
 
@@ -43,18 +44,18 @@ func (r *AuthRoom) Send(request *Request) (Response, error) {
 			return response, err
 		}
 
-		r.AuthStrategy.Apply(r.Connector, response)
-
 		if !response.OK() {
 			return response, err
+		}
+
+		if token, found := findToken(response.DTO.(map[string]any), r.AuthToken); found {
+			r.Connector.Header.Add("Authorization", "Bearer "+token)
+		} else {
+			return response, errors.New(ErrAuthRoomCanNotFoundKey)
 		}
 	}
 
 	return r.Room.Send(request)
-}
-
-func (r *AuthRoom) SetAuthStrategy(auth IAuth) {
-	r.AuthStrategy = auth
 }
 
 type IAuth interface {
@@ -65,4 +66,25 @@ type AccessTokenAuth struct{}
 
 func (a AccessTokenAuth) Apply(connector *Connector, response Response) {
 	connector.Header.Add("Authorization", "Bearer "+response.DTO.(map[string]any)["access_token"].(string))
+}
+
+func NewAccessTokenAuth() IAuth {
+	return AccessTokenAuth{}
+}
+
+func findToken(responseMap map[string]any, tokenKey string) (string, bool) {
+	for k, v := range responseMap {
+		if k == tokenKey {
+			if strValue, ok := v.(string); ok {
+				return strValue, true
+			}
+			return "", false
+		}
+		if nestedData, ok := v.(map[string]any); ok {
+			if value, found := findToken(nestedData, tokenKey); found {
+				return value, true
+			}
+		}
+	}
+	return "", false
 }

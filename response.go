@@ -20,7 +20,7 @@ type Response struct {
 	Data          []byte
 }
 
-func NewResponse(r *http.Response, forceDTO bool) (Response, error) {
+func NewResponse(r *http.Response, dto any) (Response, error) {
 	response := Response{
 		StatusCode: r.StatusCode,
 		Method:     r.Request.Method,
@@ -34,8 +34,8 @@ func NewResponse(r *http.Response, forceDTO bool) (Response, error) {
 
 	response, err = response.setData(r)
 
-	if response.DTO != nil || forceDTO {
-		response, err = response.setDTO(forceDTO)
+	if dto != nil {
+		response, err = response.setDTO(dto)
 	}
 
 	return response, err
@@ -95,10 +95,8 @@ func (r Response) setData(response *http.Response) (Response, error) {
 	return r, err
 }
 
-func (r Response) setDTO(forceDTO bool) (Response, error) {
-	if r.DTO == nil && forceDTO {
-		r.DTO = map[string]any{}
-	}
+func (r Response) setDTO(dto any) (Response, error) {
+	r.DTO = dto
 
 	err := NewDTOFactory(r.Header.Get(headerKeyAccept)).marshall(r.Data, &r.DTO)
 

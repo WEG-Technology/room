@@ -18,18 +18,11 @@ var payload = AddTODORequest{
 	UserId:    1,
 }
 
-type Auth struct{}
-
-func (a Auth) Apply(connector *room.Connector, response room.Response) {
-	connector.Header.Add("Authorization", "Bearer "+response.DTO.(map[string]any)["token"].(string))
-}
-
 func main() {
 	el := elevator.NewElevator("examples/yml_example/integration.yml")
 	engine := elevator.NewElevatorEngine(el).WarmUp()
 
 	response, err := engine.
-		PutAuthStrategy("todoRoom", Auth{}).
 		PutBodyParser("todoRoom", "addTodo", room.NewJsonBodyParser(payload)).
 		Execute("todoRoom", "addTodo")
 

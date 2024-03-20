@@ -67,7 +67,7 @@ func NewURI(fullUrl string) URI {
 	uri.path = "/" + splittedURN[1]
 
 	if len(uri.path) > 0 && uri.path[len(uri.path)-1] == '/' {
-		uri.path = uri.path[:len(uri.path)-1] // Remove the last character
+		uri.path = uri.path[:len(uri.path)-1]
 	}
 
 	return uri

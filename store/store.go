@@ -59,17 +59,13 @@ func (s *MapStore) String(key string) string {
 func (s *MapStore) StringAll() string {
 	v := reflect.ValueOf(s.All())
 
-	if v.Kind() != reflect.Map {
-		return ""
-	}
-
-	var parts []string
-
 	keys := v.MapKeys()
 
-	for _, key := range keys {
+	parts := make([]string, len(keys))
+
+	for i, key := range keys {
 		value := v.MapIndex(key).Interface()
-		parts = append(parts, fmt.Sprintf("%v: %v", key.Interface(), value))
+		parts[i] = fmt.Sprintf("%v: %v", key.Interface(), value)
 	}
 
 	return strings.Join(parts, ", ")

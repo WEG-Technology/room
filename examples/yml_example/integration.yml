@@ -8,6 +8,7 @@ flat:
           Content-Type: "application/json"
         auth:
           type: "bearer"
+          accessTokenKey: "token"
           request:
             method: "POST"
             path: "auth/login"

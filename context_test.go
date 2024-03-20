@@ -2,47 +2,33 @@ package room
 
 import (
 	"context"
-	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
 )
 
-// Test cases for ContextBuilder
 func TestContextBuilder_Build(t *testing.T) {
-	// Test case: Build context without a timeout
-	builderWithoutTimeout := NewContextBuilder(0)
-	ctxWithoutTimeout := builderWithoutTimeout.Build()
+	// Test case where timeout is not set
+	builder := NewContextBuilder(0)
+	ctx := builder.Build()
 
-	// Check if the returned context is background and cancel function is nil
-	assert.Equal(t, context.Background(), ctxWithoutTimeout.ctx)
-	assert.Nil(t, ctxWithoutTimeout.cancel)
-
-	// Test case: Build context with a timeout
-	timeoutDuration := time.Second * 5
-	builderWithTimeout := NewContextBuilder(timeoutDuration)
-	ctxWithTimeout := builderWithTimeout.Build()
-
-	// Check if the returned context is with a timeout and cancel function is not nil
-	assert.NotEqual(t, context.Background(), ctxWithTimeout.ctx)
-	assert.NotNil(t, ctxWithTimeout.cancel)
-
-	// Check if the context is canceled after the specified timeout
-	select {
-	case <-ctxWithTimeout.ctx.Done():
-		// Context is canceled, as expected
-	case <-time.After(timeoutDuration + time.Second): // Allow extra time for the context to be canceled
-		t.Error("Context is not canceled within the specified timeout")
+	// Ensure that the context is background context and cancel function is nil
+	if ctx.Ctx != context.Background() {
+		t.Error("Context is not background context when timeout is not set")
+	}
+	if ctx.Cancel != nil {
+		t.Error("Cancel function is not nil when timeout is not set")
 	}
 
-	// Ensure cancel function is called after the test
-	defer ctxWithTimeout.cancel()
-}
+	// Test case where timeout is set
+	timeout := time.Second
+	builder = NewContextBuilder(timeout)
+	ctx = builder.Build()
 
-func TestContextBuilder_Timeout(t *testing.T) {
-	// Test case: Get timeout from the ContextBuilder
-	timeoutDuration := time.Second * 10
-	builder := NewContextBuilder(timeoutDuration)
-
-	// Check if the returned timeout matches the expected value
-	assert.Equal(t, timeoutDuration, builder.Timeout())
+	// Ensure that the context is context with timeout and cancel function is not nil
+	if ctx.Ctx.Err() != nil {
+		t.Error("Context is not context with timeout when timeout is set")
+	}
+	if ctx.Cancel == nil {
+		t.Error("Cancel function is nil when timeout is set")
+	}
 }

@@ -44,7 +44,9 @@ func (f FormURLEncodedBody) Parse() *bytes.Buffer {
 
 	switch f.v.(type) {
 	case map[string]any:
-		values = mapToUrlValues(f.v.(map[string]any))
+		for key, value := range f.v.(map[string]any) {
+			values.Add(key, value.(string))
+		}
 	default:
 		values, _ = query.Values(f.v)
 	}
@@ -55,13 +57,3 @@ func (f FormURLEncodedBody) Parse() *bytes.Buffer {
 type dumpBody struct{}
 
 func (f dumpBody) Parse() *bytes.Buffer { return new(bytes.Buffer) }
-
-func mapToUrlValues(v map[string]any) url.Values {
-	values := url.Values{}
-
-	for key, value := range v {
-		values.Add(key, value.(string))
-	}
-
-	return values
-}

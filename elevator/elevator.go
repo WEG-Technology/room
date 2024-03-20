@@ -38,7 +38,6 @@ type IElevatorEngine interface {
 	PutQuery(roomKey, requestKey string, authStrategy room.IQuery) IElevatorEngine
 	PutDTO(roomKey, requestKey string, dto any) IElevatorEngine
 	GetElapsedTime() float64
-	PutAuthStrategy(roomKey string, authStrategy room.IAuth) IElevatorEngine
 }
 
 type ElevatorEngine struct {
@@ -52,7 +51,7 @@ func (e *ElevatorEngine) GetElapsedTime() float64 {
 }
 
 type RoomContainer struct {
-	Room     room.IAuthRoom
+	Room     room.IRoom
 	Requests map[string]*room.Request
 }
 
@@ -126,12 +125,12 @@ func (e *ElevatorEngine) WarmUp() IElevatorEngine {
 			room.WithHeaderContextBuilder(room.NewContextBuilder(time.Duration(r.Connection.Timeout)*time.Second)),
 		)
 
-		var roomObj room.IAuthRoom
+		var roomObj room.IRoom
 
 		if r.Connection.Auth.Type == "bearer" {
-			roomObj = room.NewAuthRoom(c, nil, e.CreateRequest(r.Connection.Auth.Request))
+			roomObj = room.NewAuthRoom(c, e.CreateRequest(r.Connection.Auth.Request), r.Connection.Auth.AccessTokenKey)
 		} else {
-			roomObj = room.NewAuthRoom(c, nil, nil)
+			roomObj = room.NewAuthRoom(c, nil, "")
 		}
 
 		roomContainers[roomKey] = RoomContainer{
@@ -193,15 +192,6 @@ func (e *ElevatorEngine) PutQuery(roomKey, requestKey string, query room.IQuery)
 			return e
 		}
 		panic(fmt.Sprintf("engine for %s on %s not configured", roomKey, requestKey))
-	}
-
-	panic(fmt.Sprintf("engine for %s not configured", roomKey))
-}
-
-func (e *ElevatorEngine) PutAuthStrategy(roomKey string, authStrategy room.IAuth) IElevatorEngine {
-	if roomContainerEntry, ok := e.RoomContainers[roomKey]; ok {
-		roomContainerEntry.Room.SetAuthStrategy(authStrategy)
-		return e
 	}
 
 	panic(fmt.Sprintf("engine for %s not configured", roomKey))
@@ -289,8 +279,9 @@ type Connection struct {
 }
 
 type ConnectionAuth struct {
-	Type    string  `yaml:"type"`
-	Request Request `yaml:"request"`
+	Type           string  `yaml:"type"`
+	AccessTokenKey string  `yaml:"accessTokenKey"`
+	Request        Request `yaml:"request"`
 }
 
 type Request struct {

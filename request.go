@@ -51,6 +51,10 @@ func NewRequest(path string, opts ...OptionRequest) *Request {
 		r.method = GET
 	}
 
+	if r.ForceDTO && r.DTO == nil {
+		r.DTO = make(map[string]any)
+	}
+
 	return r
 }
 
@@ -63,7 +67,7 @@ func (r *Request) Send() (Response, error) {
 		return Response{}, e
 	}
 
-	return NewResponse(response, r.ForceDTO)
+	return NewResponse(response, r.DTO)
 }
 
 func (r *Request) request() *http.Request {
