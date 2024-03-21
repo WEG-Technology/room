@@ -22,8 +22,9 @@ type Response struct {
 
 func NewResponse(r *http.Response, dto any) (Response, error) {
 	response := Response{
-		StatusCode: r.StatusCode,
-		Method:     r.Request.Method,
+		StatusCode:  r.StatusCode,
+		Method:      r.Request.Method,
+		RequestBody: map[string]any{},
 	}.
 		setHeader(r.Header).
 		setRequestHeader(r.Request.Header).
@@ -71,11 +72,13 @@ func (r Response) setRequestHeader(header http.Header) Response {
 
 func (r Response) setRequestBodyData(request *http.Request) Response {
 	if request.Body != nil {
-		var requestBody map[string]any
+		decoder := json.NewDecoder(request.Body)
 
-		_ = json.NewDecoder(request.Body).Decode(&requestBody)
-
-		r.RequestBody = requestBody
+		for decoder.More() {
+			if err := decoder.Decode(&r.RequestBody); err != nil {
+				panic(err)
+			}
+		}
 	}
 
 	return r
