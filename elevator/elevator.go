@@ -160,15 +160,19 @@ func (e *ElevatorEngine) CreateRequest(req Request) *room.Request {
 		parser = nil
 	}
 
-	r := room.NewRequest(
-		req.Path,
+	optionRequests := []room.OptionRequest{
 		room.WithMethod(room.HTTPMethod(req.Method)),
 		room.WithBody(parser),
-	)
+	}
 
 	if req.ForceDTO {
-		r.ForceDTO = true
+		optionRequests = append(optionRequests, room.ForceDTO())
 	}
+
+	r := room.NewRequest(
+		req.Path,
+		optionRequests...,
+	)
 
 	return r
 }
