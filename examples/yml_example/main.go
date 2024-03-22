@@ -18,6 +18,13 @@ var payload = AddTODORequest{
 	UserId:    1,
 }
 
+type ResponseSchema struct {
+	Completed bool   `json:"completed"`
+	Id        int    `json:"id"`
+	Todo      string `json:"todo"`
+	UserId    int    `json:"userId"`
+}
+
 func main() {
 	el := elevator.NewElevator("examples/yml_example/integration.yml")
 	engine := elevator.NewElevatorEngine(el).WarmUp()
@@ -27,6 +34,7 @@ func main() {
 		Execute("todoRoom", "addTodo")
 
 	fmt.Println(err)
+
 	fmt.Println("Response OK: ", response.OK())
-	fmt.Println("Response DTO: ", response.DTO)
+	fmt.Println("Response DTO: ", response.DTO(&ResponseSchema{}))
 }

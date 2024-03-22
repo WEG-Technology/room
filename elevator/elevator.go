@@ -36,7 +36,6 @@ type IElevatorEngine interface {
 	WarmUp() IElevatorEngine
 	PutBodyParser(roomKey, requestKey string, bodyParser room.IBodyParser) IElevatorEngine
 	PutQuery(roomKey, requestKey string, authStrategy room.IQuery) IElevatorEngine
-	PutDTO(roomKey, requestKey string, dto any) IElevatorEngine
 	GetElapsedTime() float64
 }
 
@@ -61,7 +60,6 @@ func NewElevatorEngine(elevator Elevator) IElevatorEngine {
 	}
 }
 
-// TODO add safety check
 func (e *ElevatorEngine) Execute(roomKey, requestKey string) (room.Response, error) {
 	if roomContainerEntry, ok := e.RoomContainers[roomKey]; ok {
 		if requestEntry, ok := roomContainerEntry.Requests[requestKey]; ok {
@@ -165,10 +163,6 @@ func (e *ElevatorEngine) CreateRequest(req Request) *room.Request {
 		room.WithBody(parser),
 	}
 
-	if req.ForceDTO {
-		optionRequests = append(optionRequests, room.ForceDTO())
-	}
-
 	r := room.NewRequest(
 		req.Path,
 		optionRequests...,
@@ -193,18 +187,6 @@ func (e *ElevatorEngine) PutQuery(roomKey, requestKey string, query room.IQuery)
 	if roomContainerEntry, ok := e.RoomContainers[roomKey]; ok {
 		if requestEntry, ok := roomContainerEntry.Requests[requestKey]; ok {
 			requestEntry.Query = query
-			return e
-		}
-		panic(fmt.Sprintf("engine for %s on %s not configured", roomKey, requestKey))
-	}
-
-	panic(fmt.Sprintf("engine for %s not configured", roomKey))
-}
-
-func (e *ElevatorEngine) PutDTO(roomKey, requestKey string, dto any) IElevatorEngine {
-	if roomContainerEntry, ok := e.RoomContainers[roomKey]; ok {
-		if requestEntry, ok := roomContainerEntry.Requests[requestKey]; ok {
-			requestEntry.DTO = dto
 			return e
 		}
 		panic(fmt.Sprintf("engine for %s on %s not configured", roomKey, requestKey))
@@ -292,7 +274,6 @@ type Request struct {
 	ConcurrentKey string `yaml:"concurrentKey"`
 	Method        string `yaml:"method"`
 	Path          string `yaml:"path"`
-	ForceDTO      bool   `yaml:"forceDTO"`
 	Body          Body   `yaml:"body"`
 }
 

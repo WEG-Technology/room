@@ -48,7 +48,7 @@ func (r *AuthRoom) Send(request *Request) (Response, error) {
 			return response, err
 		}
 
-		if token, found := findToken(response.DTO.(map[string]any), r.AuthToken); found {
+		if token, found := findToken(response.ResponseBody(), r.AuthToken); found {
 			r.Connector.Header.Add("Authorization", "Bearer "+token)
 		} else {
 			return response, errors.New(ErrAuthRoomCanNotFoundKey)
@@ -65,7 +65,7 @@ type IAuth interface {
 type AccessTokenAuth struct{}
 
 func (a AccessTokenAuth) Apply(connector *Connector, response Response) {
-	connector.Header.Add("Authorization", "Bearer "+response.DTO.(map[string]any)["access_token"].(string))
+	connector.Header.Add("Authorization", "Bearer "+response.ResponseBody()["access_token"].(string))
 }
 
 func NewAccessTokenAuth() IAuth {

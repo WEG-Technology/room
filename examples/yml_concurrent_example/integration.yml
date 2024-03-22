@@ -12,7 +12,6 @@ flat:
           concurrentKey: "add"
           method: "POST"
           path: "todos/add"
-          forceDTO: true
     todo1Room:
       connection:
         baseUrl: ${BASE_URL}
@@ -25,7 +24,6 @@ flat:
           concurrentKey: "add"
           method: "POST"
           path: "todos/add?delay=3000"
-          forceDTO: true
     todo2Room:
       connection:
         baseUrl: ${BASE_URL}
@@ -38,4 +36,3 @@ flat:
           concurrentKey: "add"
           method: "POST"
           path: "todos/add"
-          forceDTO: true

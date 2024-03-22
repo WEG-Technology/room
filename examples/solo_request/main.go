@@ -6,9 +6,9 @@ import (
 )
 
 func main() {
-	response, err := room.NewRequest("https://jsonplaceholder.typicode.com/posts/1", room.ForceDTO()).Send()
+	response, err := room.NewRequest("https://jsonplaceholder.typicode.com/posts/1").Send()
 
 	fmt.Println(err)
 
-	fmt.Println("Response:", response.DTO)
+	fmt.Println("Response:", response.ResponseBody())
 }

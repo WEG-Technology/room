@@ -3,6 +3,7 @@ package room
 import (
 	"encoding/json"
 	"encoding/xml"
+	"errors"
 	"github.com/WEG-Technology/room/store"
 	"io"
 	"net/http"
@@ -16,11 +17,10 @@ type Response struct {
 	Header        IHeader
 	RequestHeader IHeader
 	RequestBody   map[string]any
-	DTO           any
 	Data          []byte
 }
 
-func NewResponse(r *http.Response, dto any) (Response, error) {
+func NewResponse(r *http.Response) (Response, error) {
 	response := Response{
 		StatusCode:  r.StatusCode,
 		Method:      r.Request.Method,
@@ -28,16 +28,12 @@ func NewResponse(r *http.Response, dto any) (Response, error) {
 	}.
 		setHeader(r.Header).
 		setRequestHeader(r.Request.Header).
-		setRequestBodyData(r.Request).
+		setRequestBody(r.Request).
 		setRequestURI(r.Request)
 
 	var err error
 
 	response, err = response.setData(r)
-
-	if dto != nil {
-		response, err = response.setDTO(dto)
-	}
 
 	return response, err
 }
@@ -70,7 +66,7 @@ func (r Response) setRequestHeader(header http.Header) Response {
 	return r
 }
 
-func (r Response) setRequestBodyData(request *http.Request) Response {
+func (r Response) setRequestBody(request *http.Request) Response {
 	if request.Body != nil {
 		decoder := json.NewDecoder(request.Body)
 
@@ -91,19 +87,41 @@ func (r Response) setRequestURI(request *http.Request) Response {
 }
 
 func (r Response) setData(response *http.Response) (Response, error) {
-	var err error
+	if response.Body != nil {
+		var err error
 
-	r.Data, err = io.ReadAll(response.Body)
+		r.Data, err = io.ReadAll(response.Body)
 
-	return r, err
+		return r, err
+	}
+
+	return r, errors.New("responseBody is nil")
 }
 
-func (r Response) setDTO(dto any) (Response, error) {
-	r.DTO = dto
+func (r Response) ResponseBodyOrFail() (map[string]any, error) {
+	var body map[string]any
 
-	err := NewDTOFactory(r.Header.Get(headerKeyAccept)).marshall(r.Data, &r.DTO)
+	err := NewDTOFactory(r.Header.Get(headerKeyAccept)).marshall(r.Data, &body)
 
-	return r, err
+	return body, err
+}
+
+func (r Response) ResponseBody() map[string]any {
+	var body map[string]any
+
+	_ = NewDTOFactory(r.Header.Get(headerKeyAccept)).marshall(r.Data, &body)
+
+	return body
+}
+
+func (r Response) DTO(v any) any {
+	_ = NewDTOFactory(r.Header.Get(headerKeyAccept)).marshall(r.Data, v)
+
+	return v
+}
+
+func (r Response) DTOorFail(v any) error {
+	return NewDTOFactory(r.Header.Get(headerKeyAccept)).marshall(r.Data, v)
 }
 
 // IDTOFactory declares the interface for creating DTOs.

@@ -12,7 +12,6 @@ flat:
           request:
             method: "POST"
             path: "auth/login"
-            forceDTO: true
             body:
               type: "json"
               content:
@@ -24,4 +23,3 @@ flat:
           concurrentKey: "add"
           method: "POST"
           path: "todos/add"
-          forceDTO: true

@@ -26,9 +26,6 @@ type Request struct {
 	Query          IQuery
 	BodyParser     IBodyParser
 	contextBuilder IContextBuilder
-	DTO            any
-	// ForceDTO is a flag to force the parse http response to DTO which is map[string]any
-	ForceDTO bool
 }
 
 // NewRequest creates a new request
@@ -51,10 +48,6 @@ func NewRequest(path string, opts ...OptionRequest) *Request {
 		r.method = GET
 	}
 
-	if r.ForceDTO && r.DTO == nil {
-		r.DTO = make(map[string]any)
-	}
-
 	return r
 }
 
@@ -67,7 +60,7 @@ func (r *Request) Send() (Response, error) {
 		return Response{}, e
 	}
 
-	return NewResponse(response, r.DTO)
+	return NewResponse(response)
 }
 
 func (r *Request) request() *http.Request {
@@ -145,18 +138,6 @@ func WithQuery(query IQuery) OptionRequest {
 func WithHeader(header IHeader) OptionRequest {
 	return func(request *Request) {
 		request.Header = header
-	}
-}
-
-func WithDTO(dto any) OptionRequest {
-	return func(request *Request) {
-		request.DTO = dto
-	}
-}
-
-func ForceDTO() OptionRequest {
-	return func(request *Request) {
-		request.ForceDTO = true
 	}
 }
 

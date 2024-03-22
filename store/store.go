@@ -63,9 +63,9 @@ func (s *MapStore) StringAll() string {
 
 	parts := make([]string, len(keys))
 
-	for i, key := range keys {
-		value := v.MapIndex(key).Interface()
-		parts[i] = fmt.Sprintf("%v: %v", key.Interface(), value)
+	for i := 0; i < len(keys); i++ {
+		value := v.MapIndex(keys[i]).Interface()
+		parts[i] = fmt.Sprintf("%v: %v", keys[i].Interface(), value)
 	}
 
 	return strings.Join(parts, ", ")

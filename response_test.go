@@ -26,7 +26,7 @@ func TestNewResponse(t *testing.T) {
 	}
 
 	// Test case for successful creation of Response
-	resp, err := NewResponse(httpResp, false)
+	resp, err := NewResponse(httpResp)
 	if err != nil {
 		t.Errorf("NewResponse() returned unexpected error: %v", err)
 	}
@@ -34,17 +34,9 @@ func TestNewResponse(t *testing.T) {
 		t.Errorf("NewResponse() returned response with unexpected status code: %d", resp.StatusCode)
 	}
 
-	// Test case for DTO creation when forceDTO is true
-	resp, err = NewResponse(httpResp, true)
-	if err != nil {
-		t.Errorf("NewResponse(forceDTO=true) returned unexpected error: %v", err)
-	}
-	if resp.DTO == nil {
-		t.Error("NewResponse(forceDTO=true) did not create DTO")
-	}
-
 	// Test case for error in NewResponse
-	resp, err = NewResponse(httpResp, false)
+	httpResp.Body = nil
+	resp, err = NewResponse(httpResp)
 	if err == nil {
 		t.Error("NewResponse() did not return expected error for HTTP client error")
 	}
@@ -89,20 +81,6 @@ func TestResponse_SetRequestHeader(t *testing.T) {
 	}
 }
 
-// TestResponse_SetRequestBodyData tests the SetRequestBodyData method of the Response struct.
-func TestResponse_SetRequestBodyData(t *testing.T) {
-	// Test case for setting request body data
-	reqBody := &strings.Reader{}
-	httpReq := &http.Request{
-		Body: io.NopCloser(reqBody),
-	}
-	response := Response{}
-	response = response.setRequestBodyData(httpReq)
-	if response.RequestBody == nil {
-		t.Error("Response SetRequestBodyData() did not set the request body data correctly")
-	}
-}
-
 // TestResponse_SetRequestURI tests the SetRequestURI method of the Response struct.
 func TestResponse_SetRequestURI(t *testing.T) {
 	// Test case for setting request URI
@@ -134,23 +112,5 @@ func TestResponse_SetData(t *testing.T) {
 	}
 	if len(response.Data) == 0 {
 		t.Error("Response SetData() did not set the response data correctly")
-	}
-}
-
-type TestDTO struct {
-	Key string `json:"key"`
-}
-
-// TestResponse_SetDTO tests the SetDTO method of the Response struct.
-func TestResponse_SetDTO(t *testing.T) {
-	// Test case for setting DTO
-	response := Response{Header: NewHeader(), Data: []byte(`{"key": "value"}`), DTO: &TestDTO{}}
-	response, err := response.setDTO(false)
-	if err != nil {
-		t.Errorf("Response SetDTO() returned unexpected error: %v", err)
-	}
-
-	if response.DTO == nil {
-		t.Error("Response SetDTO() did not set the DTO correctly")
 	}
 }
