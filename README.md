@@ -26,11 +26,14 @@ Create your clients in a minute
 ## Installation
 `go get -u github.com/WEG-Technology/room`
 
-## Usage
+## 📚 Usage
 There are many examples in examples folder go look for it.
 
-Firstly, we need three files to start wrapping our client. Which are `connection.go`, `requests.go`, `responses.go`.
-Finally, `room.go` which is the core wrap of your client.
+#### 💫 Most Basic Example
+
+```go
+response, err := room.NewRequest("https://jsonplaceholder.typicode.com/posts/1").Send()
+```
 
 #### Connection
 We are going to wrap our base connection struct to get its skills.
