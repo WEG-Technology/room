@@ -60,7 +60,7 @@ func (r *Request) Send() (Response, error) {
 		return Response{}, e
 	}
 
-	return NewResponse(response)
+	return NewResponse(response, r.request()), nil
 }
 
 func (r *Request) request() *http.Request {

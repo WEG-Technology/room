@@ -33,8 +33,13 @@ func main() {
 		PutBodyParser("todoRoom", "addTodo", room.NewJsonBodyParser(payload)).
 		Execute("todoRoom", "addTodo")
 
-	fmt.Println(err)
+	if err != nil {
+		panic(err)
+	}
 
 	fmt.Println("Response OK: ", response.OK())
-	fmt.Println("Response DTO: ", response.DTO(&ResponseSchema{}))
+	fmt.Println("Request URI: ", response.Request.URI.String())
+	fmt.Println("Response Body: ", response.ResponseBody())
+	fmt.Println("Request Header: ", response.Request.Header)
+	fmt.Println("Request Body: ", response.RequestBody())
 }

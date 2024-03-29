@@ -26,19 +26,10 @@ func TestNewResponse(t *testing.T) {
 	}
 
 	// Test case for successful creation of Response
-	resp, err := NewResponse(httpResp)
-	if err != nil {
-		t.Errorf("NewResponse() returned unexpected error: %v", err)
-	}
+	resp := NewResponse(httpResp, httpResp.Request)
+
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("NewResponse() returned response with unexpected status code: %d", resp.StatusCode)
-	}
-
-	// Test case for error in NewResponse
-	httpResp.Body = nil
-	resp, err = NewResponse(httpResp)
-	if err == nil {
-		t.Error("NewResponse() did not return expected error for HTTP client error")
 	}
 }
 
@@ -76,26 +67,8 @@ func TestResponse_SetRequestHeader(t *testing.T) {
 	header.Add("Content-Type", "application/json")
 	response := Response{}
 	response = response.setRequestHeader(header)
-	if response.RequestHeader == nil {
+	if response.Request.Header == nil {
 		t.Error("Response SetRequestHeader() did not set the request header correctly")
-	}
-}
-
-// TestResponse_SetRequestURI tests the SetRequestURI method of the Response struct.
-func TestResponse_SetRequestURI(t *testing.T) {
-	// Test case for setting request URI
-	httpReq := &http.Request{
-		URL: &url.URL{
-			Scheme: "https",
-			Host:   "example.com",
-			Path:   "/test",
-		},
-	}
-	response := Response{}
-	response = response.setRequestURI(httpReq)
-
-	if response.RequestURI.Scheme() != "https" {
-		t.Error("Response SetRequestURI() did not set the request URI correctly")
 	}
 }
 
@@ -105,11 +78,8 @@ func TestResponse_SetData(t *testing.T) {
 	httpResp := &http.Response{
 		Body: io.NopCloser(strings.NewReader("test data")),
 	}
-	response := Response{}
-	response, err := response.setData(httpResp)
-	if err != nil {
-		t.Errorf("Response SetData() returned unexpected error: %v", err)
-	}
+	response := Response{}.setData(httpResp)
+
 	if len(response.Data) == 0 {
 		t.Error("Response SetData() did not set the response data correctly")
 	}

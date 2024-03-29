@@ -3,7 +3,6 @@ package room
 import (
 	"encoding/json"
 	"encoding/xml"
-	"errors"
 	"github.com/WEG-Technology/room/store"
 	"io"
 	"net/http"
@@ -11,31 +10,33 @@ import (
 )
 
 type Response struct {
-	RequestURI    URI
-	StatusCode    int
-	Method        string
-	Header        IHeader
-	RequestHeader IHeader
-	RequestBody   map[string]any
-	Data          []byte
+	StatusCode int
+	Header     IHeader
+	Data       []byte
+	Request    RequestDTO
 }
 
-func NewResponse(r *http.Response) (Response, error) {
-	response := Response{
-		StatusCode:  r.StatusCode,
-		Method:      r.Request.Method,
-		RequestBody: map[string]any{},
+type RequestDTO struct {
+	Header IHeader
+	Data   []byte
+	URI    URI
+	Method string
+}
+
+func NewResponse(response *http.Response, request *http.Request) Response {
+	responseDTO := Response{
+		StatusCode: response.StatusCode,
+		Request: RequestDTO{
+			Method: request.Method,
+			URI:    NewURI(request.URL.String()),
+		},
 	}.
-		setHeader(r.Header).
-		setRequestHeader(r.Request.Header).
-		setRequestBody(r.Request).
-		setRequestURI(r.Request)
+		setHeader(response.Header).
+		setData(response).
+		setRequestHeader(request.Header).
+		setRequestData(request)
 
-	var err error
-
-	response, err = response.setData(r)
-
-	return response, err
+	return responseDTO
 }
 
 func (r Response) OK() bool {
@@ -61,41 +62,17 @@ func (r Response) setRequestHeader(header http.Header) Response {
 		m.Add(key, strings.Join(values, " "))
 	}
 
-	r.RequestHeader = NewHeader(m)
+	r.Request.Header = NewHeader(m)
 
 	return r
 }
 
-func (r Response) setRequestBody(request *http.Request) Response {
-	if request.Body != nil {
-		decoder := json.NewDecoder(request.Body)
-
-		for decoder.More() {
-			if err := decoder.Decode(&r.RequestBody); err != nil {
-				panic(err)
-			}
-		}
-	}
-
-	return r
-}
-
-func (r Response) setRequestURI(request *http.Request) Response {
-	r.RequestURI = NewURI(request.URL.String())
-
-	return r
-}
-
-func (r Response) setData(response *http.Response) (Response, error) {
+func (r Response) setData(response *http.Response) Response {
 	if response.Body != nil {
-		var err error
-
-		r.Data, err = io.ReadAll(response.Body)
-
-		return r, err
+		r.Data, _ = io.ReadAll(response.Body)
 	}
 
-	return r, errors.New("responseBody is nil")
+	return r
 }
 
 func (r Response) ResponseBodyOrFail() (map[string]any, error) {
@@ -115,13 +92,51 @@ func (r Response) ResponseBody() map[string]any {
 }
 
 func (r Response) DTO(v any) any {
-	_ = NewDTOFactory(r.Header.Get(headerKeyAccept)).marshall(r.Data, v)
+	if r.Data != nil {
+		_ = NewDTOFactory(r.Header.Get(headerKeyAccept)).marshall(r.Data, v)
+	}
 
 	return v
 }
 
 func (r Response) DTOorFail(v any) error {
 	return NewDTOFactory(r.Header.Get(headerKeyAccept)).marshall(r.Data, v)
+}
+
+func (r Response) setRequestData(request *http.Request) Response {
+	if request.Body != nil {
+		r.Request.Data, _ = io.ReadAll(request.Body)
+	}
+
+	return r
+}
+
+func (r Response) RequestBodyOrFail() (map[string]any, error) {
+	var body map[string]any
+
+	err := NewDTOFactory(r.Header.Get(headerKeyContentType)).marshall(r.Request.Data, &body)
+
+	return body, err
+}
+
+func (r Response) RequestBody() map[string]any {
+	var body map[string]any
+
+	_ = NewDTOFactory(r.Header.Get(headerKeyAccept)).marshall(r.Request.Data, &body)
+
+	return body
+}
+
+func (r Response) RequestDTO(v any) any {
+	if r.Data != nil {
+		_ = NewDTOFactory(r.Header.Get(headerKeyContentType)).marshall(r.Request.Data, v)
+	}
+
+	return v
+}
+
+func (r Response) RequestDTOorFail(v any) any {
+	return NewDTOFactory(r.Header.Get(headerKeyContentType)).marshall(r.Request.Data, v)
 }
 
 // IDTOFactory declares the interface for creating DTOs.
