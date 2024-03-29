@@ -29,7 +29,7 @@ func main() {
 		PutBodyParser("todoRoom", "addTodo", room.NewJsonBodyParser(payload)).
 		PutBodyParser("todo1Room", "addTodo", room.NewJsonBodyParser(payload)).
 		PutBodyParser("todo2Room", "addTodo", room.NewJsonBodyParser(payload)).
-		ExecuteConcurrent("add")
+		ExecuteConcurrent("add", "todoRoom", "todo1Room", "todo2Room") // you can either set applied rooms here or just leave it empty for all rooms
 
 	fmt.Println(engine.GetElapsedTime())
 
