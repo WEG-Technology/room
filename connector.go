@@ -46,9 +46,5 @@ func (c *Connector) Do(request *Request) (Response, error) {
 		request.contextBuilder = c.contextBuilder
 	}
 
-	if c.Header != nil {
-		request.Header = c.Header
-	}
-
 	return request.Send()
 }

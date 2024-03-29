@@ -24,15 +24,31 @@ type RequestDTO struct {
 }
 
 func NewResponse(response *http.Response, request *http.Request) Response {
+	responseDTO := newResponse(request).setHeader(response.Header).setData(response)
+
+	responseDTO.StatusCode = response.StatusCode
+
+	return responseDTO
+}
+
+func NewErrorResponse(request *http.Request, err error) (Response, error) {
+	responseDTO := newResponse(request)
+
+	errData, _ := json.Marshal(map[string]string{"runtime_error": err.Error()})
+	responseDTO.Data = errData
+
+	return responseDTO, err
+}
+
+func newResponse(request *http.Request) Response {
 	responseDTO := Response{
-		StatusCode: response.StatusCode,
+		Header: NewHeader(),
 		Request: RequestDTO{
 			Method: request.Method,
 			URI:    NewURI(request.URL.String()),
+			Header: NewHeader(),
 		},
 	}.
-		setHeader(response.Header).
-		setData(response).
 		setRequestHeader(request.Header).
 		setRequestData(request)
 
@@ -86,7 +102,9 @@ func (r Response) ResponseBodyOrFail() (map[string]any, error) {
 func (r Response) ResponseBody() map[string]any {
 	var body map[string]any
 
-	_ = NewDTOFactory(r.Header.Get(headerKeyAccept)).marshall(r.Data, &body)
+	if r.Data != nil {
+		_ = NewDTOFactory(r.Header.Get(headerKeyAccept)).marshall(r.Data, &body)
+	}
 
 	return body
 }
@@ -122,7 +140,9 @@ func (r Response) RequestBodyOrFail() (map[string]any, error) {
 func (r Response) RequestBody() map[string]any {
 	var body map[string]any
 
-	_ = NewDTOFactory(r.Header.Get(headerKeyAccept)).marshall(r.Request.Data, &body)
+	if r.Request.Data != nil {
+		_ = NewDTOFactory(r.Header.Get(headerKeyAccept)).marshall(r.Request.Data, &body)
+	}
 
 	return body
 }

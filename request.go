@@ -20,8 +20,8 @@ type ISend interface {
 
 type Request struct {
 	path           string
-	uri            URI
-	method         HTTPMethod
+	URI            URI
+	Method         HTTPMethod
 	Header         IHeader
 	Query          IQuery
 	BodyParser     IBodyParser
@@ -44,8 +44,8 @@ func NewRequest(path string, opts ...OptionRequest) *Request {
 		r.BodyParser = dumpBody{}
 	}
 
-	if r.method == "" {
-		r.method = GET
+	if r.Method == "" {
+		r.Method = GET
 	}
 
 	return r
@@ -54,10 +54,10 @@ func NewRequest(path string, opts ...OptionRequest) *Request {
 func (r *Request) Send() (Response, error) {
 	c := new(http.Client)
 
-	response, e := c.Do(r.request())
+	response, err := c.Do(r.request())
 
-	if e != nil {
-		return Response{}, e
+	if err != nil {
+		return NewErrorResponse(r.request(), err)
 	}
 
 	return NewResponse(response, r.request()), nil
@@ -73,12 +73,12 @@ func (r *Request) request() *http.Request {
 	}
 
 	if r.Query != nil && r.Query.String() != "" {
-		r.uri = NewURI(r.path + "?" + r.Query.String())
+		r.URI = NewURI(r.path + "?" + r.Query.String())
 	} else {
-		r.uri = NewURI(r.path)
+		r.URI = NewURI(r.path)
 	}
 
-	req, _ := http.NewRequestWithContext(context.Ctx, r.method.String(), r.uri.String(), r.BodyParser.Parse())
+	req, _ := http.NewRequestWithContext(context.Ctx, r.Method.String(), r.URI.String(), r.BodyParser.Parse())
 
 	if r.Header != nil {
 		r.Header.Properties().Each(func(k string, v any) {
@@ -96,6 +96,10 @@ func (r *Request) initBaseUrl(baseUrl string) *Request {
 
 	if strings.HasSuffix(baseUrl, "/") {
 		baseUrl = baseUrl[:len(baseUrl)-1]
+	}
+
+	if strings.HasPrefix(r.path, baseUrl) {
+		r.path = r.path[len(baseUrl)+1:]
 	}
 
 	r.path = baseUrl + "/" + r.path
@@ -119,7 +123,7 @@ type OptionRequest func(request *Request)
 
 func WithMethod(method HTTPMethod) OptionRequest {
 	return func(request *Request) {
-		request.method = method
+		request.Method = method
 	}
 }
 
