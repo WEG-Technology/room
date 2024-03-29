@@ -8,6 +8,7 @@ import (
 	"github.com/WEG-Technology/room/store"
 	"gopkg.in/yaml.v3"
 	"os"
+	"slices"
 	"sync"
 	"time"
 )
@@ -32,7 +33,7 @@ func marshalJson(config IntegrationConfig) (jsonData []byte, err error) {
 
 type IElevatorEngine interface {
 	Execute(roomKey, requestKey string) (room.Response, error)
-	ExecuteConcurrent(concurrentKey string) map[string]room.Response
+	ExecuteConcurrent(concurrentKey string, appliedRooms ...string) map[string]room.Response
 	WarmUp() IElevatorEngine
 	PutBodyParser(roomKey, requestKey string, bodyParser room.IBodyParser) IElevatorEngine
 	PutQuery(roomKey, requestKey string, authStrategy room.IQuery) IElevatorEngine
@@ -82,7 +83,7 @@ func (c *RoomResponseContainer) PutResponse(key string, response room.Response) 
 	c.Responses[key] = response
 }
 
-func (e *ElevatorEngine) ExecuteConcurrent(concurrentKey string) map[string]room.Response {
+func (e *ElevatorEngine) ExecuteConcurrent(concurrentKey string, appliedRooms ...string) map[string]room.Response {
 	e.Segment = segment.StartSegmentNow()
 	defer e.Segment.End()
 
@@ -94,7 +95,7 @@ func (e *ElevatorEngine) ExecuteConcurrent(concurrentKey string) map[string]room
 
 	for roomKey, configRoom := range e.elevator.Config.Flat.Rooms {
 		for requestKey, req := range configRoom.Requests {
-			if concurrentKey == req.ConcurrentKey {
+			if ((len(appliedRooms) > 0 && slices.Contains(appliedRooms, roomKey)) || len(appliedRooms) == 0) && concurrentKey == req.ConcurrentKey {
 				wg.Add(1)
 				go func(a, b string) {
 					//TODO handle errors
