@@ -119,6 +119,16 @@ func (r *Request) MergeHeader(header IHeader) *Request {
 	return r
 }
 
+func (r *Request) SetContextBuilder(contextBuilder IContextBuilder) *Request {
+	if contextBuilder == nil {
+		return r
+	}
+
+	r.contextBuilder = contextBuilder
+
+	return r
+}
+
 type OptionRequest func(request *Request)
 
 func WithMethod(method HTTPMethod) OptionRequest {

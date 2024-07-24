@@ -38,13 +38,9 @@ func (c *Connector) Send(path string) (Response, error) {
 }
 
 func (c *Connector) Do(request *Request) (Response, error) {
-	request.
-		initBaseUrl(c.baseUrl).
-		mergeHeader(c.Header)
-
-	if c.contextBuilder != nil {
-		request.contextBuilder = c.contextBuilder
-	}
-
-	return request.Send()
+	return request.
+		SetBaseUrl(c.baseUrl).
+		MergeHeader(c.Header).
+		SetContextBuilder(c.contextBuilder).
+		Send()
 }
