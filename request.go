@@ -89,7 +89,7 @@ func (r *Request) request() *http.Request {
 	return req
 }
 
-func (r *Request) initBaseUrl(baseUrl string) *Request {
+func (r *Request) SetBaseUrl(baseUrl string) *Request {
 	if strings.HasPrefix(r.path, "/") {
 		r.path = r.path[1:]
 	}
@@ -107,7 +107,7 @@ func (r *Request) initBaseUrl(baseUrl string) *Request {
 	return r
 }
 
-func (r *Request) mergeHeader(header IHeader) *Request {
+func (r *Request) MergeHeader(header IHeader) *Request {
 	if header != nil {
 		if r.Header == nil {
 			r.Header = header

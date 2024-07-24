@@ -149,14 +149,14 @@ func (r Response) RequestBody() map[string]any {
 
 func (r Response) RequestDTO(v any) any {
 	if r.Data != nil {
-		_ = NewDTOFactory(r.Header.Get(headerKeyContentType)).marshall(r.Request.Data, v)
+		_ = NewDTOFactory(r.Header.Get(headerKeyContentType)).marshall(r.Request.Data, &v)
 	}
 
 	return v
 }
 
 func (r Response) RequestDTOorFail(v any) any {
-	return NewDTOFactory(r.Header.Get(headerKeyContentType)).marshall(r.Request.Data, v)
+	return NewDTOFactory(r.Header.Get(headerKeyContentType)).marshall(r.Request.Data, &v)
 }
 
 // IDTOFactory declares the interface for creating DTOs.

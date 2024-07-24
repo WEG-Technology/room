@@ -2,6 +2,7 @@ package elevator
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/WEG-Technology/room"
 	"github.com/WEG-Technology/room/segment"
@@ -38,6 +39,7 @@ type IElevatorEngine interface {
 	PutBodyParser(roomKey, requestKey string, bodyParser room.IBodyParser) IElevatorEngine
 	PutQuery(roomKey, requestKey string, authStrategy room.IQuery) IElevatorEngine
 	GetElapsedTime() float64
+	Request(roomKey, requestKey string) (*room.Request, error)
 }
 
 type ElevatorEngine struct {
@@ -194,6 +196,17 @@ func (e *ElevatorEngine) PutQuery(roomKey, requestKey string, query room.IQuery)
 	}
 
 	panic(fmt.Sprintf("engine for %s not configured", roomKey))
+}
+
+func (e *ElevatorEngine) Request(roomKey, requestKey string) (*room.Request, error) {
+	if roomContainerEntry, ok := e.RoomContainers[roomKey]; ok {
+		if requestEntry, ok := roomContainerEntry.Requests[requestKey]; ok {
+			return requestEntry, nil
+		}
+		return nil, errors.New("request not found")
+	}
+
+	return nil, errors.New("request not found")
 }
 
 func NewElevator(integrationYmlPath string) Elevator {
