@@ -157,6 +157,8 @@ func (e *ElevatorEngine) CreateRequest(req Request) *room.Request {
 		parser = room.NewJsonBodyParser(req.Body.Content)
 	case "form":
 		parser = room.NewFormURLEncodedBodyParser(req.Body.Content)
+	case "multipart-form":
+		parser = room.NewMultipartFormDataBodyParser(req.Body.Content)
 	default:
 		parser = nil
 	}

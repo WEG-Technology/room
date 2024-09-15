@@ -67,7 +67,6 @@ func (f *FormURLEncodedBody) Parse() *bytes.Buffer {
 // MultipartFormDataBody handles multipart/form-data encoding
 type MultipartFormDataBody struct {
 	formData    map[string]string
-	files       map[string]string
 	contentType string
 }
 
@@ -92,10 +91,14 @@ func (f *MultipartFormDataBody) Parse() *bytes.Buffer {
 	return &body
 }
 
-// NewMultipartFormDataBodyParser creates a new MultipartFormDataBodyParser instance
-// v contains form data, files can be nil if no files are provided
-func NewMultipartFormDataBodyParser(formData map[string]string, files map[string]string) IBodyParser {
-	return &MultipartFormDataBody{formData: formData, files: files}
+func NewMultipartFormDataBodyParser(v any) IBodyParser {
+	if _, ok := v.(map[string]string); !ok {
+		panic("form data must be a map[string]string")
+	}
+
+	return &MultipartFormDataBody{
+		formData: v.(map[string]string),
+	}
 }
 
 type dumpBody struct{}
