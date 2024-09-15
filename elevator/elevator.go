@@ -9,6 +9,7 @@ import (
 	"github.com/WEG-Technology/room/store"
 	"gopkg.in/yaml.v3"
 	"os"
+	"reflect"
 	"slices"
 	"sync"
 	"time"
@@ -34,6 +35,7 @@ func marshalJson(config IntegrationConfig) (jsonData []byte, err error) {
 
 type IElevatorEngine interface {
 	Execute(roomKey, requestKey string) (room.Response, error)
+	DynamicExecute(roomKey, requestKey string, v any) (room.Response, error)
 	ExecuteConcurrent(concurrentKey string, appliedRooms ...string) map[string]room.Response
 	WarmUp() IElevatorEngine
 	PutBodyParser(roomKey, requestKey string, bodyParser room.IBodyParser) IElevatorEngine
@@ -66,6 +68,19 @@ func NewElevatorEngine(elevator Elevator) IElevatorEngine {
 func (e *ElevatorEngine) Execute(roomKey, requestKey string) (room.Response, error) {
 	if roomContainerEntry, ok := e.RoomContainers[roomKey]; ok {
 		if requestEntry, ok := roomContainerEntry.Requests[requestKey]; ok {
+			return roomContainerEntry.Room.Send(requestEntry)
+		}
+		panic(fmt.Sprintf("engine for %s on %s not configured", roomKey, requestKey))
+	}
+
+	panic(fmt.Sprintf("engine for %s not configured", roomKey))
+}
+
+func (e *ElevatorEngine) DynamicExecute(roomKey, requestKey string, v any) (room.Response, error) {
+	if roomContainerEntry, ok := e.RoomContainers[roomKey]; ok {
+		if requestEntry, ok := roomContainerEntry.Requests[requestKey]; ok {
+			elevatorRequest := e.elevator.GetRequest(roomKey, requestKey)
+			requestEntry.BodyParser = e.generateDynamicParser(elevatorRequest.Body.Type, elevatorRequest.Body.DynamicContent, NewDynamicExecutionPayload(v).toMap())
 			return roomContainerEntry.Room.Send(requestEntry)
 		}
 		panic(fmt.Sprintf("engine for %s on %s not configured", roomKey, requestKey))
@@ -150,18 +165,7 @@ func (e *ElevatorEngine) WarmUp() IElevatorEngine {
 }
 
 func (e *ElevatorEngine) CreateRequest(req Request) *room.Request {
-	var parser room.IBodyParser
-	//TODO expand here
-	switch req.Body.Type {
-	case "json":
-		parser = room.NewJsonBodyParser(req.Body.Content)
-	case "form":
-		parser = room.NewFormURLEncodedBodyParser(req.Body.Content)
-	case "multipart-form":
-		parser = room.NewMultipartFormDataBodyParser(req.Body.Content)
-	default:
-		parser = nil
-	}
+	parser := e.initParser(req.Body.Type, req.Body.Content)
 
 	optionRequests := []room.OptionRequest{
 		room.WithMethod(room.HTTPMethod(req.Method)),
@@ -174,6 +178,44 @@ func (e *ElevatorEngine) CreateRequest(req Request) *room.Request {
 	)
 
 	return r
+}
+
+func (e *ElevatorEngine) initParser(bodyType string, content any) room.IBodyParser {
+	var parser room.IBodyParser
+	//TODO expand here
+	switch bodyType {
+	case "json":
+		parser = room.NewJsonBodyParser(content)
+	case "form":
+		parser = room.NewFormURLEncodedBodyParser(content)
+	case "multipart-form":
+		parser = room.NewMultipartFormDataBodyParser(content)
+	default:
+		parser = nil
+	}
+
+	return parser
+}
+
+// TODO should be refactored in v2 for use dynamics as `content` instead of `dynamicContent`
+func (e *ElevatorEngine) generateDynamicParser(bodyType string, dynamicContents []DynamicContent, v map[string]any) room.IBodyParser {
+	requestPayload := map[string]any{}
+
+	for _, dynamicContent := range dynamicContents {
+
+		if dynamicContent.Value != nil {
+			requestPayload[dynamicContent.Key] = dynamicContent.Value
+			continue
+		}
+
+		if _, ok := v[dynamicContent.Key]; !ok {
+			panic(fmt.Sprintf("dynamic content key %s not found in payload", dynamicContent.Key))
+		}
+
+		requestPayload[dynamicContent.Key] = v[dynamicContent.Key]
+	}
+
+	return e.initParser(bodyType, requestPayload)
 }
 
 func (e *ElevatorEngine) PutBodyParser(roomKey, requestKey string, bodyParser room.IBodyParser) IElevatorEngine {
@@ -241,6 +283,16 @@ type Elevator struct {
 	Config IntegrationConfig
 }
 
+func (e Elevator) GetRequest(roomKey, requestKey string) Request {
+	if roomEntry, ok := e.Config.Flat.Rooms[roomKey]; ok {
+		if requestEntry, ok := roomEntry.Requests[requestKey]; ok {
+			return requestEntry
+		}
+	}
+
+	panic(fmt.Sprintf("request for %s on %s not found", roomKey, requestKey))
+}
+
 func (e Elevator) AddBody(body Body, room string, request string) Elevator {
 	if roomEntry, ok := e.Config.Flat.Rooms[room]; ok {
 		if requestEntry, ok := roomEntry.Requests[request]; ok {
@@ -269,8 +321,14 @@ func NewBody(contentType string, content any) Body {
 }
 
 type Body struct {
-	Type    string `yaml:"type"`
-	Content any    `yaml:"content"`
+	Type           string           `yaml:"type"`
+	Content        any              `yaml:"content"`
+	DynamicContent []DynamicContent `yaml:"dynamicContent"`
+}
+
+type DynamicContent struct {
+	Key   string `yaml:"key"`
+	Value any    `yaml:"value"`
 }
 
 type Connection struct {
@@ -314,4 +372,61 @@ func (r *IntegrationConfig) UnmarshalJSON(data []byte) error {
 	}
 
 	return nil
+}
+
+type DynamicExecutionPayload struct {
+	Fields []DynamicExecutionField
+}
+
+func (p DynamicExecutionPayload) toMap() map[string]any {
+	payload := map[string]any{}
+
+	for _, field := range p.Fields {
+		payload[field.Key] = field.Value
+	}
+
+	return payload
+}
+
+type DynamicExecutionField struct {
+	Key   string
+	Value any
+}
+
+func NewDynamicExecutionPayload(v any) DynamicExecutionPayload {
+	payload := DynamicExecutionPayload{}
+	switch v.(type) {
+	case map[string]any:
+		for key, value := range v.(map[string]any) {
+			payload.Fields = append(payload.Fields, DynamicExecutionField{Key: key, Value: value})
+		}
+	case store.MapStore:
+		storeMap := v.(store.MapStore)
+		for key, value := range storeMap.All() {
+			payload.Fields = append(payload.Fields, DynamicExecutionField{Key: key, Value: value})
+		}
+	default:
+		val := reflect.ValueOf(v)
+		if val.Kind() == reflect.Struct {
+			structToMap(val, &payload)
+		}
+	}
+
+	return payload
+}
+
+func structToMap(val reflect.Value, payload *DynamicExecutionPayload) {
+	for i := 0; i < val.NumField(); i++ {
+		field := val.Field(i)
+		fieldName := val.Type().Field(i).Tag.Get("json")
+
+		if field.Kind() == reflect.Struct {
+			structToMap(field, payload)
+		} else {
+			payload.Fields = append(payload.Fields, DynamicExecutionField{
+				Key:   fieldName,
+				Value: field.Interface(),
+			})
+		}
+	}
 }

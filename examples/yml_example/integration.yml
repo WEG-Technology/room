@@ -17,9 +17,19 @@ flat:
               content:
                 username: ${USERNAME}
                 password: ${PASSWORD}
-
       requests:
         addTodo:
           concurrentKey: "add"
           method: "POST"
           path: "todos/add"
+          body:
+            type: "json"
+            dynamicContent:
+              - key: "test_for_getting_env"
+                value: ${PASSWORD}
+              - key: "todo"
+                type: "string"
+              - key: "completed"
+                type: "boolean"
+              - key: "userId"
+                type: "string"

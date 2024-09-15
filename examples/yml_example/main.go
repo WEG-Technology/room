@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/WEG-Technology/room"
 	"github.com/WEG-Technology/room/elevator"
 )
 
@@ -29,9 +28,7 @@ func main() {
 	el := elevator.NewElevator("examples/yml_example/integration.yml")
 	engine := elevator.NewElevatorEngine(el).WarmUp()
 
-	response, err := engine.
-		PutBodyParser("todoRoom", "addTodo", room.NewJsonBodyParser(payload)).
-		Execute("todoRoom", "addTodo")
+	response, err := engine.DynamicExecute("todoRoom", "addTodo", payload)
 
 	if err != nil {
 		panic(err)
