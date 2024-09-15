@@ -8,6 +8,7 @@ import (
 
 type IMap interface {
 	All() map[string]any
+	AllAsString() map[string]string
 	Integer(key string) int
 	String(key string) string
 	StringList(key string) []string
@@ -46,6 +47,17 @@ func (s *MapStore) getValidData(key string) any {
 
 func (s *MapStore) All() map[string]any {
 	return s.data
+}
+
+func (s *MapStore) AllAsString() map[string]string {
+	data := s.All()
+	result := make(map[string]string)
+
+	for key, value := range data {
+		result[key] = fmt.Sprintf("%v", value)
+	}
+
+	return result
 }
 
 func (s *MapStore) Integer(key string) int {

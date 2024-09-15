@@ -7,11 +7,12 @@ import (
 )
 
 const (
-	headerKeyContentType       = "Content-Type"
-	headerKeyAccept            = "Accept"
-	headerValueFormEncoded     = "application/x-www-form-urlencoded"
-	headerValueApplicationJson = "application/json"
-	headerValueTextXML         = "text/xml"
+	headerKeyContentType         = "Content-Type"
+	headerKeyAccept              = "Accept"
+	headerValueFormEncoded       = "application/x-www-form-urlencoded"
+	headerValueApplicationJson   = "application/json"
+	headerValueTextXML           = "text/xml"
+	headerValueMultipartFormData = "multipart/form-data"
 )
 
 type ISend interface {
@@ -54,13 +55,15 @@ func NewRequest(path string, opts ...OptionRequest) *Request {
 func (r *Request) Send() (Response, error) {
 	c := new(http.Client)
 
-	response, err := c.Do(r.request())
+	req := r.request()
+
+	response, err := c.Do(req)
 
 	if err != nil {
-		return NewErrorResponse(r.request(), err)
+		return NewErrorResponse(req, err)
 	}
 
-	return NewResponse(response, r.request()), nil
+	return NewResponse(response, req), nil
 }
 
 func (r *Request) request() *http.Request {
@@ -84,6 +87,10 @@ func (r *Request) request() *http.Request {
 		r.Header.Properties().Each(func(k string, v any) {
 			req.Header.Add(k, v.(string))
 		})
+	}
+
+	if r.BodyParser.ContentType() != "" {
+		req.Header.Set("Content-Type", r.BodyParser.ContentType())
 	}
 
 	return req
