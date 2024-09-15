@@ -80,7 +80,7 @@ func (e *ElevatorEngine) DynamicExecute(roomKey, requestKey string, v any) (room
 	if roomContainerEntry, ok := e.RoomContainers[roomKey]; ok {
 		if requestEntry, ok := roomContainerEntry.Requests[requestKey]; ok {
 			elevatorRequest := e.elevator.GetRequest(roomKey, requestKey)
-			requestEntry.BodyParser = e.generateDynamicParser(elevatorRequest.Body.Type, elevatorRequest.Body.DynamicContent, NewDynamicExecutionPayload(v).toMap())
+			requestEntry.BodyParser = e.generateDynamicParser(elevatorRequest.Body.Type, elevatorRequest.Body.DynamicContent, NewDynamicExecutionPayload(v).Fields)
 			return roomContainerEntry.Room.Send(requestEntry)
 		}
 		panic(fmt.Sprintf("engine for %s on %s not configured", roomKey, requestKey))
@@ -375,17 +375,7 @@ func (r *IntegrationConfig) UnmarshalJSON(data []byte) error {
 }
 
 type DynamicExecutionPayload struct {
-	Fields []DynamicExecutionField
-}
-
-func (p DynamicExecutionPayload) toMap() map[string]any {
-	payload := map[string]any{}
-
-	for _, field := range p.Fields {
-		payload[field.Key] = field.Value
-	}
-
-	return payload
+	Fields map[string]any
 }
 
 type DynamicExecutionField struct {
@@ -394,16 +384,18 @@ type DynamicExecutionField struct {
 }
 
 func NewDynamicExecutionPayload(v any) DynamicExecutionPayload {
-	payload := DynamicExecutionPayload{}
+	payload := DynamicExecutionPayload{Fields: map[string]any{}}
+
 	switch v.(type) {
 	case map[string]any:
 		for key, value := range v.(map[string]any) {
-			payload.Fields = append(payload.Fields, DynamicExecutionField{Key: key, Value: value})
+			payload.Fields[key] = value
 		}
-	case store.MapStore:
-		storeMap := v.(store.MapStore)
+	case store.IMap:
+		storeMap := v.(store.IMap)
+
 		for key, value := range storeMap.All() {
-			payload.Fields = append(payload.Fields, DynamicExecutionField{Key: key, Value: value})
+			payload.Fields[key] = value
 		}
 	default:
 		val := reflect.ValueOf(v)
@@ -423,10 +415,7 @@ func structToMap(val reflect.Value, payload *DynamicExecutionPayload) {
 		if field.Kind() == reflect.Struct {
 			structToMap(field, payload)
 		} else {
-			payload.Fields = append(payload.Fields, DynamicExecutionField{
-				Key:   fieldName,
-				Value: field.Interface(),
-			})
+			payload.Fields[fieldName] = field.Interface()
 		}
 	}
 }

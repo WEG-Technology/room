@@ -92,12 +92,22 @@ func (f *MultipartFormDataBody) Parse() *bytes.Buffer {
 }
 
 func NewMultipartFormDataBodyParser(v any) IBodyParser {
-	if _, ok := v.(map[string]string); !ok {
-		panic("form data must be a map[string]string")
+	formData := make(map[string]string)
+
+	if _, ok := v.(map[string]any); ok {
+		newMap := make(map[string]string)
+
+		for key, value := range v.(map[string]any) {
+			newMap[key] = value.(string)
+		}
+
+		formData = newMap
+	} else {
+		formData, _ = v.(map[string]string)
 	}
 
 	return &MultipartFormDataBody{
-		formData: v.(map[string]string),
+		formData: formData,
 	}
 }
 
