@@ -1,10 +1,8 @@
 package room
 
 import (
-	"bytes"
 	"encoding/json"
 	"encoding/xml"
-	"fmt"
 	"github.com/WEG-Technology/room/store"
 	"io"
 	"mime"
@@ -126,30 +124,7 @@ func (r Response) DTOorFail(v any) error {
 
 func (r Response) setRequestData(request *http.Request) Response {
 	if request.Body != nil {
-		var buf bytes.Buffer
-		_, err := io.Copy(&buf, request.Body)
-		if err != nil {
-			fmt.Println("Error reading request body:", err)
-		}
-
-		// Converting the body back to a string or further process it
-		requestBodyData := buf.String()
-
-		// Optionally, parse the body back into a map-like structure
-		requestMap := make(map[string]string)
-		for _, pair := range strings.Split(requestBodyData, "&") {
-			parts := strings.Split(pair, "=")
-			if len(parts) == 2 {
-				requestMap[parts[0]] = parts[1]
-			}
-		}
-
-		// Print the map structure
-		fmt.Println("Request body as map:", requestMap)
-
 		r.Request.Data, _ = io.ReadAll(request.Body)
-
-		fmt.Println("DDddddddd", r.Request.Data)
 	}
 
 	return r
