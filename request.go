@@ -27,6 +27,7 @@ type Request struct {
 	Query          IQuery
 	BodyParser     IBodyParser
 	contextBuilder IContextBuilder
+	Cookies        []*http.Cookie
 }
 
 // NewRequest creates a new request
@@ -91,6 +92,12 @@ func (r *Request) request() *http.Request {
 
 	if r.BodyParser.ContentType() != "" {
 		req.Header.Set("Content-Type", r.BodyParser.ContentType())
+	}
+
+	if r.Cookies != nil && len(r.Cookies) > 0 {
+		for _, cookie := range r.Cookies {
+			req.AddCookie(cookie)
+		}
 	}
 
 	return req
@@ -165,5 +172,11 @@ func WithHeader(header IHeader) OptionRequest {
 func WithContextBuilder(contextBuilder IContextBuilder) OptionRequest {
 	return func(request *Request) {
 		request.contextBuilder = contextBuilder
+	}
+}
+
+func WithCookies(cookies ...*http.Cookie) OptionRequest {
+	return func(request *Request) {
+		request.Cookies = cookies
 	}
 }
